@@ -1541,11 +1541,15 @@ def generate_dashboard_html(output_file="Crispy_Chicken_Dashboard.html"):
 </html>
 """
     
-    # Write the HTML file
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    
-    print(f"Dashboard generated successfully: {output_file}")
+        # Write the HTML file
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        print(f"Dashboard generated successfully: {output_file}")
+        return output_file
+    except Exception as e:
+        logger.error(f"Error generating dashboard: {str(e)}")
+        raise
 
 # --------------------------
 # --- MAIN EXECUTION ---
