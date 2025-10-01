@@ -1,3 +1,21 @@
+import logging
+import sys
+import random
+import pandas as pd
+import json
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('dashboard.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
 # --------------------------
 # --- REALISTIC DATA SETUP ---
 # --------------------------
@@ -65,24 +83,24 @@ payment_distribution = {
 }
 
 # Generate realistic 2023 data
-def generate_realistic_data(branch_name, base_values, payment_distribution):
+def generate_realistic_data(branch_name, branch_base_values, payment_distribution):
     data = []
     
     # Add Receipts row
     data.append({
         "Type": "Receipts",
-        "Total": base_values["Total"],
+        "Total": branch_base_values["Total"],
         "Pct of Total": "100%",
-        "Count": base_values["Count"],
-        "Average": base_values["Total"] / base_values["Count"]
+        "Count": branch_base_values["Count"],
+        "Average": branch_base_values["Total"] / branch_base_values["Count"]
     })
     
     # Add payment method rows
     for payment_type, percentage in payment_distribution.items():
         # Add some random variation to make data more realistic
         variation = random.uniform(0.95, 1.05)
-        total = base_values["Total"] * percentage * variation
-        count = base_values["Count"] * percentage * variation * random.uniform(0.9, 1.1)
+        total = branch_base_values["Total"] * percentage * variation
+        count = branch_base_values["Count"] * percentage * variation * random.uniform(0.9, 1.1)
         average = total / count
         
         data.append({
@@ -223,95 +241,96 @@ def filter_platforms(all_years_data):
 # --------------------------
 
 def generate_dashboard_html(output_file="Crispy_Chicken_Dashboard.html"):
-    # Generate 2024 & 2025 data
-    year_2024 = generate_year_data(branches_2023, growth_rate=0.10)
-    year_2025 = generate_year_data(branches_2023, growth_rate=0.15, months=9)
-    all_years_data[2024] = year_2024
-    all_years_data[2025] = year_2025
-    
-    # Calculate key metrics
-    total_revenue_2024 = sum(all_years_data[2024][branch].loc[0, 'Total'] for branch in branch_names)
-    total_revenue_2025 = sum(all_years_data[2025][branch].loc[0, 'Total'] for branch in branch_names)
-    growth_rate = ((total_revenue_2025 - total_revenue_2024) / total_revenue_2024) * 100
-    
-    # Create dashboard data structure
-    dashboard_data = {
-        'branches': branch_names,
-        'branchNames': {name: f"Crispy Chicken - {name}" for name in branch_names},
-        'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        'monthNames': {month: month for month in ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']},
-        'data2024': {
-            'sales': {},
-            'orders': {},
-            'payment_methods': year_2024
-        },
-        'data2025': {
-            'sales': {},
-            'orders': {},
-            'payment_methods': year_2025
-        },
-        'userEntries': []
-    }
-    
-    # Generate monthly sales and orders for each branch
-    for branch in branch_names:
-        # 2024 data
-        annual_sales_2024 = year_2024[branch].loc[0, 'Total']
-        annual_orders_2024 = year_2024[branch].loc[0, 'Count']
-        monthly_sales_2024, monthly_orders_2024 = generate_monthly_data(
-            annual_sales_2024, annual_orders_2024, months=12, growth_rate=0.10
-        )
-        dashboard_data['data2024']['sales'][branch] = monthly_sales_2024
-        dashboard_data['data2024']['orders'][branch] = monthly_orders_2024
+    try:
+        # Generate 2024 & 2025 data
+        year_2024 = generate_year_data(branches_2023, growth_rate=0.10)
+        year_2025 = generate_year_data(branches_2023, growth_rate=0.15, months=9)
+        all_years_data[2024] = year_2024
+        all_years_data[2025] = year_2025
         
-        # 2025 data (only up to September)
-        annual_sales_2025 = year_2025[branch].loc[0, 'Total']
-        annual_orders_2025 = year_2025[branch].loc[0, 'Count']
-        monthly_sales_2025, monthly_orders_2025 = generate_monthly_data(
-            annual_sales_2025, annual_orders_2025, months=9, growth_rate=0.15
-        )
-        # Pad with zeros for October-December
-        monthly_sales_2025 += [0] * 3
-        monthly_orders_2025 += [0] * 3
-        dashboard_data['data2025']['sales'][branch] = monthly_sales_2025
-        dashboard_data['data2025']['orders'][branch] = monthly_orders_2025
-    
-    # Calculate delivery metrics
-    delivery_metrics_2024 = {}
-    delivery_metrics_2025 = {}
-    
-    for branch in branch_names:
-        delivery_metrics_2024[branch] = calculate_delivery_metrics(branch, 2024, dashboard_data)
-        delivery_metrics_2025[branch] = calculate_delivery_metrics(branch, 2025, dashboard_data)
-    
-    # Calculate year metrics
-    def calculate_year_metrics(year):
-        data_year = dashboard_data[f'data{year}']
-        total_sales = sum(sum(data_year['sales'][branch]) for branch in branch_names)
-        total_orders = sum(sum(data_year['orders'][branch]) for branch in branch_names)
-        avg_order_value = total_sales / total_orders if total_orders > 0 else 0
+        # Calculate key metrics
+        total_revenue_2024 = sum(all_years_data[2024][branch].loc[0, 'Total'] for branch in branch_names)
+        total_revenue_2025 = sum(all_years_data[2025][branch].loc[0, 'Total'] for branch in branch_names)
+        growth_rate = ((total_revenue_2025 - total_revenue_2024) / total_revenue_2024) * 100
+        
+        # Create dashboard data structure
+        dashboard_data = {
+            'branches': branch_names,
+            'branchNames': {name: f"Crispy Chicken - {name}" for name in branch_names},
+            'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            'monthNames': {month: month for month in ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']},
+            'data2024': {
+                'sales': {},
+                'orders': {},
+                'payment_methods': year_2024
+            },
+            'data2025': {
+                'sales': {},
+                'orders': {},
+                'payment_methods': year_2025
+            },
+            'userEntries': []
+        }
+        
+        # Generate monthly sales and orders for each branch
+        for branch in branch_names:
+            # 2024 data
+            annual_sales_2024 = year_2024[branch].loc[0, 'Total']
+            annual_orders_2024 = year_2024[branch].loc[0, 'Count']
+            monthly_sales_2024, monthly_orders_2024 = generate_monthly_data(
+                annual_sales_2024, annual_orders_2024, months=12, growth_rate=0.10
+            )
+            dashboard_data['data2024']['sales'][branch] = monthly_sales_2024
+            dashboard_data['data2024']['orders'][branch] = monthly_orders_2024
+            
+            # 2025 data (only up to September)
+            annual_sales_2025 = year_2025[branch].loc[0, 'Total']
+            annual_orders_2025 = year_2025[branch].loc[0, 'Count']
+            monthly_sales_2025, monthly_orders_2025 = generate_monthly_data(
+                annual_sales_2025, annual_orders_2025, months=9, growth_rate=0.15
+            )
+            # Pad with zeros for October-December
+            monthly_sales_2025 += [0] * 3
+            monthly_orders_2025 += [0] * 3
+            dashboard_data['data2025']['sales'][branch] = monthly_sales_2025
+            dashboard_data['data2025']['orders'][branch] = monthly_orders_2025
         
         # Calculate delivery metrics
-        total_delivery_sales = sum(delivery_metrics_2024[branch]['delivery_sales'] if year == 2024 else delivery_metrics_2025[branch]['delivery_sales'] for branch in branch_names)
-        total_delivery_orders = sum(delivery_metrics_2024[branch]['delivery_orders'] if year == 2024 else delivery_metrics_2025[branch]['delivery_orders'] for branch in branch_names)
-        delivery_percentage = (total_delivery_sales / total_sales) * 100 if total_sales > 0 else 0
-        avg_delivery_value = total_delivery_sales / total_delivery_orders if total_delivery_orders > 0 else 0
+        delivery_metrics_2024 = {}
+        delivery_metrics_2025 = {}
         
-        return {
-            "totalSales": total_sales,
-            "totalOrders": total_orders,
-            "averageOrderValue": avg_order_value,
-            "totalDeliverySales": total_delivery_sales,
-            "totalDeliveryOrders": total_delivery_orders,
-            "averageDeliveryValue": avg_delivery_value,
-            "deliveryPercentage": delivery_percentage
-        }
-    
-    metrics2024 = calculate_year_metrics(2024)
-    metrics2025 = calculate_year_metrics(2025)
-    
-    # Generate HTML content
-    html_content = f"""<!DOCTYPE html>
+        for branch in branch_names:
+            delivery_metrics_2024[branch] = calculate_delivery_metrics(branch, 2024, dashboard_data)
+            delivery_metrics_2025[branch] = calculate_delivery_metrics(branch, 2025, dashboard_data)
+        
+        # Calculate year metrics
+        def calculate_year_metrics(year):
+            data_year = dashboard_data[f'data{year}']
+            total_sales = sum(sum(data_year['sales'][branch]) for branch in branch_names)
+            total_orders = sum(sum(data_year['orders'][branch]) for branch in branch_names)
+            avg_order_value = total_sales / total_orders if total_orders > 0 else 0
+            
+            # Calculate delivery metrics
+            total_delivery_sales = sum(delivery_metrics_2024[branch]['delivery_sales'] if year == 2024 else delivery_metrics_2025[branch]['delivery_sales'] for branch in branch_names)
+            total_delivery_orders = sum(delivery_metrics_2024[branch]['delivery_orders'] if year == 2024 else delivery_metrics_2025[branch]['delivery_orders'] for branch in branch_names)
+            delivery_percentage = (total_delivery_sales / total_sales) * 100 if total_sales > 0 else 0
+            avg_delivery_value = total_delivery_sales / total_delivery_orders if total_delivery_orders > 0 else 0
+            
+            return {
+                "totalSales": total_sales,
+                "totalOrders": total_orders,
+                "averageOrderValue": avg_order_value,
+                "totalDeliverySales": total_delivery_sales,
+                "totalDeliveryOrders": total_delivery_orders,
+                "averageDeliveryValue": avg_delivery_value,
+                "deliveryPercentage": delivery_percentage
+            }
+        
+        metrics2024 = calculate_year_metrics(2024)
+        metrics2025 = calculate_year_metrics(2025)
+        
+        # Generate HTML content
+        html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1532,56 +1551,10 @@ def generate_dashboard_html(output_file="Crispy_Chicken_Dashboard.html"):
 # --- MAIN EXECUTION ---
 # --------------------------
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Crispy Chicken Sales Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f8f9fa; }
-        .container { max-width: 1000px; margin: 40px auto; background: #fff; border-radius: 12px; padding: 30px; box-shadow: 0 8px 20px #0001; }
-        h1 { color: #e74c3c; }
-        canvas { background: #fff; border-radius: 8px; padding: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Crispy Chicken Sales Dashboard</h1>
-        <p>This is a template. You must add your own sales data and graphs below.</p>
-        <canvas id="salesChart" width="900" height="400"></canvas>
-    </div>
-    <script>
-        // Example data (replace with your real data)
-        const branchNames = ["Al Rigga", "Al Barsha", "Hamdan", "Khalidiya", "Muroor", "Satwa", "Shabiya", "Electra"];
-        const sales2024 = [76198.20, 629719.75, 722126.83, 571512.20, 493890.77, 557244.49, 669003.30, 727586.93];
-        const sales2025 = [80000.00, 650000.00, 750000.00, 600000.00, 520000.00, 570000.00, 700000.00, 750000.00];
-
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: branchNames,
-                datasets: [
-                    {
-                        label: '2024 Sales',
-                        data: sales2024,
-                        backgroundColor: 'rgba(231, 76, 60, 0.7)'
-                    },
-                    {
-                        label: '2025 Sales',
-                        data: sales2025,
-                        backgroundColor: 'rgba(52, 152, 219, 0.7)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    </script>
-</body>
-</html>    
+if __name__ == "__main__":
+    try:
+        dashboard_file = generate_dashboard_html()
+        print(f"Dashboard created successfully: {dashboard_file}")
+    except Exception as e:
+        print(f"Error creating dashboard: {str(e)}")
+        sys.exit(1)
