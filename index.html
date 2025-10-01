@@ -92,22 +92,100 @@ total_revenue_2024 = sum(year_2024[branch].loc[0, 'Total'] for branch in branch_
 total_revenue_2025 = sum(year_2025[branch].loc[0, 'Total'] for branch in branch_names)
 growth_rate = ((total_revenue_2025 - total_revenue_2024) / total_revenue_2024) * 100
 
+# Calculate delivery metrics
+def calculate_delivery_metrics(branch, year_data):
+    # Get the payment method data for the branch and year
+    df = year_data['payment_methods'][branch]
+    
+    # Sum all payments that are either delivery or online
+    delivery_sales = df[df['Type'].str.contains('Delivery|ONLINE', case=False)]['Total'].sum()
+    total_sales = df[df['Type']=='Receipts']['Total'].sum()  # This should be the total for the branch
+    
+    # Similarly for orders
+    delivery_orders = df[df['Type'].str.contains('Delivery|ONLINE', case=False)]['Count'].sum()
+    total_orders = df[df['Type']=='Receipts']['Count'].sum()
+    
+    return {
+        'delivery_sales': delivery_sales,
+        'delivery_orders': delivery_orders,
+        'delivery_percentage': (delivery_sales / total_sales) * 100 if total_sales > 0 else 0,
+        'avg_delivery_value': delivery_sales / delivery_orders if delivery_orders > 0 else 0
+    }
+
+# Generate monthly data with seasonality
+def generate_monthly_data(annual_sales, annual_orders, months=12, growth_rate=0.0):
+    monthly_sales = []
+    monthly_orders = []
+    
+    # Base monthly distribution (without seasonality)
+    base_monthly = annual_sales / months
+    base_monthly_orders = annual_orders / months
+    
+    for i in range(months):
+        # Apply seasonality: higher in summer (June, July, August) and lower in winter (December, January, February)
+        if i in [5, 6, 7]:  # Summer months (June, July, August)
+            season = 1.2
+        elif i in [0, 11]:  # Winter months (January, December)
+            season = 0.8
+        else:
+            season = 1.0
+        
+        # Apply growth rate for each month (cumulative)
+        growth = 1 + growth_rate * (i / months)
+        
+        monthly_sales.append(int(base_monthly * season * growth))
+        monthly_orders.append(int(base_monthly_orders * season * growth))
+    
+    return monthly_sales, monthly_orders
+
 # Create dashboard data structure
 dashboard_data = {
     'branches': branch_names,
     'branchNames': {name: f"Crispy Chicken - {name}" for name in branch_names},
     'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    'monthNames': {month: month for month in ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']},
     'data2024': {
-        'sales': {branch: [random.randint(10000, 50000) for _ in range(12)] for branch in branch_names},
-        'orders': {branch: [random.randint(500, 2500) for _ in range(12)] for branch in branch_names},
+        'sales': {},
+        'orders': {},
         'payment_methods': year_2024
     },
     'data2025': {
-        'sales': {branch: [random.randint(11000, 55000) for _ in range(9)] + [0, 0, 0] for branch in branch_names},
-        'orders': {branch: [random.randint(600, 2800) for _ in range(9)] + [0, 0, 0] for branch in branch_names},
+        'sales': {},
+        'orders': {},
         'payment_methods': year_2025
     }
 }
+
+# Generate monthly sales and orders for each branch
+for branch in branch_names:
+    # 2024 data
+    annual_sales_2024 = year_2024[branch].loc[0, 'Total']
+    annual_orders_2024 = year_2024[branch].loc[0, 'Count']
+    monthly_sales_2024, monthly_orders_2024 = generate_monthly_data(
+        annual_sales_2024, annual_orders_2024, months=12, growth_rate=0.10
+    )
+    dashboard_data['data2024']['sales'][branch] = monthly_sales_2024
+    dashboard_data['data2024']['orders'][branch] = monthly_orders_2024
+    
+    # 2025 data (only up to September)
+    annual_sales_2025 = year_2025[branch].loc[0, 'Total']
+    annual_orders_2025 = year_2025[branch].loc[0, 'Count']
+    monthly_sales_2025, monthly_orders_2025 = generate_monthly_data(
+        annual_sales_2025, annual_orders_2025, months=9, growth_rate=0.15
+    )
+    # Pad with zeros for October-December
+    monthly_sales_2025 += [0] * 3
+    monthly_orders_2025 += [0] * 3
+    dashboard_data['data2025']['sales'][branch] = monthly_sales_2025
+    dashboard_data['data2025']['orders'][branch] = monthly_orders_2025
+
+# Calculate delivery metrics
+delivery_metrics_2024 = {}
+delivery_metrics_2025 = {}
+
+for branch in branch_names:
+    delivery_metrics_2024[branch] = calculate_delivery_metrics(branch, dashboard_data['data2024'])
+    delivery_metrics_2025[branch] = calculate_delivery_metrics(branch, dashboard_data['data2025'])
 
 # Calculate year metrics
 def calculate_year_metrics(year):
@@ -116,10 +194,10 @@ def calculate_year_metrics(year):
     total_orders = sum(sum(data_year['orders'][branch]) for branch in branch_names)
     avg_order_value = total_sales / total_orders if total_orders > 0 else 0
     
-    # Simplified delivery metrics
-    total_delivery_sales = total_sales * 0.3  # Assume 30% of sales are delivery
-    total_delivery_orders = total_orders * 0.25  # Assume 25% of orders are delivery
-    delivery_percentage = 30.0  # Fixed percentage for simplicity
+    # Calculate delivery metrics
+    total_delivery_sales = sum(delivery_metrics_2024[branch]['delivery_sales'] if year == 2024 else delivery_metrics_2025[branch]['delivery_sales'] for branch in branch_names)
+    total_delivery_orders = sum(delivery_metrics_2024[branch]['delivery_orders'] if year == 2024 else delivery_metrics_2025[branch]['delivery_orders'] for branch in branch_names)
+    delivery_percentage = (total_delivery_sales / total_sales) * 100 if total_sales > 0 else 0
     avg_delivery_value = total_delivery_sales / total_delivery_orders if total_delivery_orders > 0 else 0
     
     return {
@@ -186,12 +264,27 @@ def generate_dashboard_html(output_file="Crispy_Chicken_Dashboard.html"):
             border-radius: 10px;
             margin-bottom: 30px;
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }}
+        
+        header::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff20" fill-opacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,144C960,149,1056,139,1152,128C1248,117,1344,107,1392,101.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+            background-size: cover;
         }}
         
         h1 {{
             font-size: 2.8rem;
             font-weight: 700;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 1;
         }}
         
         .subtitle {{
@@ -199,6 +292,8 @@ def generate_dashboard_html(output_file="Crispy_Chicken_Dashboard.html"):
             font-size: 1.2rem;
             margin-top: 10px;
             opacity: 0.9;
+            position: relative;
+            z-index: 1;
         }}
         
         .dashboard {{
