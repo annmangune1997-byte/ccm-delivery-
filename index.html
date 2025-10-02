@@ -90,6 +90,126 @@
             z-index: 1;
         }
         
+        .report-controls {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .report-controls h3 {
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            font-size: 1.3rem;
+        }
+        
+        .date-range {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        
+        .date-input {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        
+        .date-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0d47a1;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #0f9d58;
+            transform: translateY(-2px);
+        }
+        
+        .btn-warning {
+            background: var(--warning-color);
+            color: #333;
+        }
+        
+        .btn-warning:hover {
+            background: #f9a825;
+            transform: translateY(-2px);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .report-info {
+            background: rgba(26, 115, 232, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .report-info h4 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #5f6368;
+        }
+        
+        .info-value {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        
         .period-selector {
             display: flex;
             justify-content: center;
@@ -155,8 +275,8 @@
         }
         
         .menu-item {
-            padding: 12px 15px;
-            margin-bottom: 8px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
             border-radius: 8px;
             cursor: pointer;
             transition: var(--transition);
@@ -164,15 +284,20 @@
             align-items: center;
             gap: 12px;
             font-weight: 500;
+            border: 2px solid transparent;
         }
         
         .menu-item:hover {
             background: #f1f3f4;
+            transform: translateX(5px);
+            border-color: var(--primary-color);
         }
         
         .menu-item.active {
             background: var(--primary-color);
             color: white;
+            border-color: var(--primary-color);
+            transform: translateX(5px);
         }
         
         .content {
@@ -181,6 +306,7 @@
             border-radius: 10px;
             box-shadow: var(--card-shadow);
             padding: 30px;
+            min-height: 100vh;
         }
         
         .section {
@@ -204,6 +330,8 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--primary-color);
         }
         
         .stats-grid {
@@ -220,6 +348,18 @@
             box-shadow: var(--card-shadow);
             transition: var(--transition);
             border-top: 4px solid var(--primary-color);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), transparent);
         }
         
         .stat-card:hover {
@@ -231,12 +371,24 @@
             border-top-color: var(--accent-color);
         }
         
+        .stat-card.negative::before {
+            background: linear-gradient(90deg, var(--accent-color), transparent);
+        }
+        
         .stat-card.positive {
             border-top-color: var(--secondary-color);
         }
         
+        .stat-card.positive::before {
+            background: linear-gradient(90deg, var(--secondary-color), transparent);
+        }
+        
         .stat-card.warning {
             border-top-color: var(--warning-color);
+        }
+        
+        .stat-card.warning::before {
+            background: linear-gradient(90deg, var(--warning-color), transparent);
         }
         
         .stat-card h3 {
@@ -289,25 +441,25 @@
             display: flex;
             align-items: flex-start;
             gap: 15px;
+            position: relative;
         }
         
-        .alert-success {
-            background: rgba(52, 168, 83, 0.1);
-            border-left: 4px solid var(--secondary-color);
-        }
-        
-        .alert-success h3 {
-            color: var(--secondary-color);
-            margin-bottom: 5px;
-        }
-        
-        .alert-success p {
-            color: #3c4043;
+        .alert::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            border-radius: 10px 0 0 10px;
         }
         
         .alert-danger {
             background: rgba(234, 67, 53, 0.1);
-            border-left: 4px solid var(--accent-color);
+        }
+        
+        .alert-danger::before {
+            background: var(--accent-color);
         }
         
         .alert-danger h3 {
@@ -319,18 +471,76 @@
             color: #3c4043;
         }
         
-        .alert-warning {
+        .chart-container {
+            margin: 30px 0;
+            position: relative;
+            height: 400px;
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .chart-container h3 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 25px;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 12px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+        
+        .tab:hover {
+            background: #f8f9fa;
+        }
+        
+        .tab.active {
+            border-bottom-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background: rgba(52, 168, 83, 0.1);
+            color: var(--secondary-color);
+        }
+        
+        .badge-danger {
+            background: rgba(234, 67, 53, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .badge-warning {
             background: rgba(251, 188, 5, 0.1);
-            border-left: 4px solid var(--warning-color);
-        }
-        
-        .alert-warning h3 {
             color: var(--warning-color);
-            margin-bottom: 5px;
-        }
-        
-        .alert-warning p {
-            color: #3c4043;
         }
         
         .comparison-table {
@@ -380,6 +590,12 @@
             box-shadow: var(--card-shadow);
             margin-bottom: 25px;
             border-left: 4px solid var(--primary-color);
+            transition: var(--transition);
+        }
+        
+        .strategy-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--hover-shadow);
         }
         
         .strategy-card h3 {
@@ -389,17 +605,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-        }
-        
-        .strategy-card .outlet-tag {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            background: rgba(26, 115, 232, 0.1);
-            color: var(--primary-color);
-            margin-right: 8px;
         }
         
         .strategy-card ul {
@@ -412,197 +617,37 @@
             line-height: 1.6;
         }
         
-        .chart-container {
-            margin: 30px 0;
-            position: relative;
-            height: 400px;
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: var(--card-shadow);
-        }
-        
-        .chart-container h3 {
-            font-size: 1.4rem;
-            margin-bottom: 20px;
-            color: var(--dark-color);
-        }
-        
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #e0e0e0;
-            margin-bottom: 25px;
-        }
-        
-        .tab {
-            padding: 12px 20px;
-            font-weight: 600;
-            cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: var(--transition);
-        }
-        
-        .tab:hover {
-            background: #f8f9fa;
-        }
-        
-        .tab.active {
-            border-bottom-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        
-        .badge-success {
-            background: rgba(52, 168, 83, 0.1);
-            color: var(--secondary-color);
-        }
-        
-        .badge-danger {
-            background: rgba(234, 67, 53, 0.1);
-            color: var(--accent-color);
-        }
-        
-        .badge-warning {
-            background: rgba(251, 188, 5, 0.1);
-            color: var(--warning-color);
-        }
-        
-        .market-insights {
-            background: linear-gradient(135deg, rgba(26, 115, 232, 0.05), rgba(52, 168, 83, 0.05));
-            border-radius: 12px;
-            padding: 25px;
-            margin: 30px 0;
-            border-left: 4px solid var(--primary-color);
-        }
-        
-        .market-insights h3 {
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-        }
-        
-        .market-insights ul {
-            padding-left: 20px;
-            margin-top: 15px;
-        }
-        
-        .market-insights li {
-            margin-bottom: 10px;
-            line-height: 1.6;
-        }
-        
-        .btn {
-            padding: 12px 20px;
-            border: none;
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
             border-radius: 8px;
-            font-size: 1rem;
+            color: white;
             font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            display: inline-flex;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
         
-        .btn-primary {
-            background: var(--primary-color);
-            color: white;
+        .notification.show {
+            transform: translateX(0);
         }
         
-        .btn-primary:hover {
-            background: #0d47a1;
-        }
-        
-        .btn-secondary {
+        .notification.success {
             background: var(--secondary-color);
-            color: white;
         }
         
-        .btn-secondary:hover {
-            background: #0f9d58;
-        }
-        
-        .btn-danger {
+        .notification.error {
             background: var(--accent-color);
-            color: white;
         }
         
-        .btn-danger:hover {
-            background: #c62828;
-        }
-        
-        .btn-warning {
+        .notification.warning {
             background: var(--warning-color);
             color: #333;
-        }
-        
-        .btn-warning:hover {
-            background: #f9a825;
-        }
-        
-        .btn-group {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
-        }
-        
-        .report-controls {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: var(--card-shadow);
-        }
-        
-        .report-controls h3 {
-            margin-bottom: 15px;
-            color: var(--primary-color);
-        }
-        
-        .date-range {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        
-        .date-input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
-        
-        .report-info {
-            background: rgba(26, 115, 232, 0.1);
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 20px;
-            border-left: 4px solid var(--primary-color);
-        }
-        
-        .report-info h4 {
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
-        
-        .report-info p {
-            margin-bottom: 5px;
         }
         
         @media (max-width: 1200px) {
@@ -633,6 +678,9 @@
                 flex-direction: column;
                 align-items: flex-start;
             }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -647,23 +695,42 @@
         <div class="report-controls">
             <h3><i class="fas fa-file-alt"></i> Report Controls</h3>
             <div class="date-range">
-                <label for="startDate">Start Date:</label>
+                <label for="startDate"><strong>Start Date:</strong></label>
                 <input type="date" id="startDate" class="date-input" value="2024-01-01">
-                <label for="endDate">End Date:</label>
+                <label for="endDate"><strong>End Date:</strong></label>
                 <input type="date" id="endDate" class="date-input" value="2025-09-30">
-                <button class="btn btn-primary" onclick="generateReport()">
-                    <i class="fas fa-sync-alt"></i> Generate Report
-                </button>
-                <button class="btn btn-secondary" onclick="exportToPDF()">
-                    <i class="fas fa-file-pdf"></i> Export PDF
-                </button>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="generateReport()">
+                        <i class="fas fa-sync-alt"></i> Generate Report
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf"></i> Export PDF
+                    </button>
+                    <button class="btn btn-warning" onclick="refreshData()">
+                        <i class="fas fa-refresh"></i> Refresh Data
+                    </button>
+                </div>
             </div>
             <div class="report-info">
                 <h4>Report Information</h4>
-                <p><strong>Data Range:</strong> <span id="dataRange">January 2024 - September 2025</span></p>
-                <p><strong>Total Branches:</strong> <span id="totalBranches">8</span></p>
-                <p><strong>Active Branches:</strong> <span id="activeBranches">7</span></p>
-                <p><strong>Last Updated:</strong> <span id="lastUpdated">Real-time</span></p>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">Data Range:</span>
+                        <span class="info-value" id="dataRange">January 2024 - September 2025</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total Branches:</span>
+                        <span class="info-value" id="totalBranches">8</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Active Branches:</span>
+                        <span class="info-value" id="activeBranches">7</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Last Updated:</span>
+                        <span class="info-value" id="lastUpdated">Real-time</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1275,7 +1342,7 @@
                     <div id="abu-dhabi" class="tab-content">
                         <div class="chart-container">
                             <h3><i class="fas fa-chart-bar"></i> Abu Dhabi Branch Performance</h3>
-                            <canvas id="abu DhabiChart"></canvas>
+                            <canvas id="abudhabiChart"></canvas>
                         </div>
                         
                         <div class="strategy-card">
@@ -1338,7 +1405,12 @@
                     </div>
                     
                     <div id="market-overview" class="tab-content active">
-                        <div class="market-insights">
+                        <div class="chart-container">
+                            <h3><i class="fas fa-chart-pie"></i> Market Growth Projections</h3>
+                            <canvas id="marketGrowthChart"></canvas>
+                        </div>
+                        
+                        <div class="strategy-card">
                             <h3><i class="fas fa-chart-line"></i> UAE QSR Market Outlook</h3>
                             <ul>
                                 <li><strong>Market Size:</strong> UAE QSR market growing at 19.2% CAGR to reach $25.36 billion by 2033</li>
@@ -1348,11 +1420,6 @@
                                 <li><strong>Tourism Impact:</strong> Hospitality sector growing at 13.25% annually, reaching $158.22B by 2033</li>
                                 <li><strong>Delivery Market:</strong> Food delivery market growing at 15.8% annually with AED 9.2 average cost</li>
                             </ul>
-                        </div>
-                        
-                        <div class="chart-container">
-                            <h3><i class="fas fa-chart-pie"></i> Market Growth Projections</h3>
-                            <canvas id="marketGrowthChart"></canvas>
                         </div>
                     </div>
                     
@@ -1752,20 +1819,6 @@
             }
         };
 
-        // Chart configurations
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: false
-                }
-            }
-        };
-
         // Initialize charts
         function initCharts() {
             // Summary Chart
@@ -1787,7 +1840,15 @@
                         }
                     ]
                 },
-                options: chartOptions
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
             });
 
             // Branch AOV Chart
@@ -1806,7 +1867,13 @@
                     }]
                 },
                 options: {
-                    ...chartOptions,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true
@@ -1838,7 +1905,15 @@
                         }
                     ]
                 },
-                options: chartOptions
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
             });
 
             // Pickup Chart
@@ -1864,7 +1939,15 @@
                         }
                     ]
                 },
-                options: chartOptions
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
             });
 
             // Delivery Chart
@@ -1882,15 +1965,40 @@
                             label: 'Delivery Time (min)',
                             data: deliveryTimes,
                             backgroundColor: '#fbbc05',
+                            yAxisID: 'y',
                         },
                         {
                             label: 'Delivery Accuracy (%)',
                             data: deliveryAccuracy,
                             backgroundColor: '#34a853',
+                            yAxisID: 'y1',
                         }
                     ]
                 },
-                options: chartOptions
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                    }
+                }
             });
 
             // Channel Chart
@@ -1901,18 +2009,26 @@
                     labels: ['Online', 'Direct/Call'],
                     datasets: [
                         {
-                            label: '2024',
+                            label: '2024 AOV',
                             data: [48.29, 45.67],
                             backgroundColor: '#1a73e8',
                         },
                         {
-                            label: '2025',
+                            label: '2025 AOV',
                             data: [45.13, 45.13],
-                            backgroundColor: '#34a853',
+                            backgroundColor: '#ea4335',
                         }
                     ]
                 },
-                options: chartOptions
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
             });
 
             // Delivery Channels Chart
@@ -1930,11 +2046,19 @@
                         {
                             label: '2025 Orders',
                             data: [28000, 22000, 12817],
-                            backgroundColor: '#ea4335',
+                            backgroundColor: '#34a853',
                         }
                     ]
                 },
-                options: chartOptions
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
             });
 
             // Regional Chart
@@ -1943,14 +2067,22 @@
                 type: 'bar',
                 data: {
                     labels: ['Abu Dhabi', 'Dubai'],
-                    datasets: [{
-                        label: 'Average AOV Change (%)',
-                        data: [-1.48, 5.42],
-                        backgroundColor: [-1.48 > 0 ? '#34a853' : '#ea4335', 5.42 > 0 ? '#34a853' : '#ea4335']
-                    }]
+                    datasets: [
+                        {
+                            label: 'AOV Change (%)',
+                            data: [-1.48, 5.42],
+                            backgroundColor: [-1.48 > 0 ? '#34a853' : '#ea4335', 5.42 > 0 ? '#34a853' : '#ea4335']
+                        }
+                    ]
                 },
                 options: {
-                    ...chartOptions,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true
@@ -1960,22 +2092,28 @@
             });
 
             // Abu Dhabi Chart
-            const abu DhabiCtx = document.getElementById('abu DhabiChart').getContext('2d');
-            const abu DhabiBranches = ['Hamdan', 'Khalidiyah', 'Shabiya', 'Muroor'];
-            const abu DhabiAOVChanges = [-2.29, -2.39, -0.54, 0.3];
+            const abudhabiCtx = document.getElementById('abudhabiChart').getContext('2d');
+            const abudhabiBranches = ['Muroor', 'Shabiya', 'Hamdan', 'Khalidiyah'];
+            const abudhabiAOVChanges = [0.3, -0.54, -2.29, -2.39];
             
-            new Chart(abu DhabiCtx, {
+            new Chart(abudhabiCtx, {
                 type: 'bar',
                 data: {
-                    labels: abu DhabiBranches,
+                    labels: abudhabiBranches,
                     datasets: [{
                         label: 'AOV Change (%)',
-                        data: abu DhabiAOVChanges,
-                        backgroundColor: abu DhabiAOVChanges.map(c => c > 0 ? '#34a853' : '#ea4335')
+                        data: abudhabiAOVChanges,
+                        backgroundColor: abudhabiAOVChanges.map(c => c > 0 ? '#34a853' : '#ea4335')
                     }]
                 },
                 options: {
-                    ...chartOptions,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true
@@ -1986,8 +2124,8 @@
 
             // Dubai Chart
             const dubaiCtx = document.getElementById('dubaiChart').getContext('2d');
-            const dubaiBranches = ['Al Barsha', 'Al Satwa'];
-            const dubaiAOVChanges = [8.29, 3.77];
+            const dubaiBranches = ['Al Satwa', 'Al Barsha', 'Al Rigga'];
+            const dubaiAOVChanges = [3.77, 8.29, 0];
             
             new Chart(dubaiCtx, {
                 type: 'bar',
@@ -2000,7 +2138,13 @@
                     }]
                 },
                 options: {
-                    ...chartOptions,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true
@@ -2017,190 +2161,206 @@
                     labels: ['2024', '2025', '2026', '2027', '2028', '2029', '2030', '2031', '2032', '2033'],
                     datasets: [
                         {
-                            label: 'QSR Market (Billion USD)',
-                            data: [12.5, 14.9, 17.8, 21.2, 25.3, 30.1, 35.9, 42.8, 51.0, 60.7],
+                            label: 'QSR Market ($B)',
+                            data: [21.2, 25.3, 30.2, 36.0, 42.9, 51.1, 60.9, 72.6, 86.5, 103.1],
                             borderColor: '#1a73e8',
                             backgroundColor: 'rgba(26, 115, 232, 0.1)',
                             fill: true
                         },
                         {
-                            label: 'Foodservice Market (Billion USD)',
-                            data: [18.2, 20.3, 22.6, 25.2, 28.1, 31.3, 34.9, 38.9, 43.3, 48.2],
+                            label: 'Foodservice Market ($B)',
+                            data: [37.5, 41.8, 46.6, 51.9, 57.8, 64.4, 71.7, 79.9, 89.0, 99.1],
                             borderColor: '#34a853',
                             backgroundColor: 'rgba(52, 168, 83, 0.1)',
-                            fill: true
-                        },
-                        {
-                            label: 'Hospitality Market (Billion USD)',
-                            data: [45.8, 51.9, 58.7, 66.5, 75.3, 85.3, 96.6, 109.4, 123.9, 140.3],
-                            borderColor: '#fbbc05',
-                            backgroundColor: 'rgba(251, 188, 5, 0.1)',
                             fill: true
                         }
                     ]
                 },
                 options: {
-                    ...chartOptions,
-                    scales: {
-                        y: {
-                            beginAtZero: false
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
                         }
                     }
                 }
             });
         }
 
-        // Set current date
-        function setCurrentDate() {
-            const now = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
-        }
-
-        // Generate report function
-        function generateReport() {
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            
-            // Update report information
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-            const dateRange = `${start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
-            
-            document.getElementById('dataRange').textContent = dateRange;
-            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
-            
-            // Show notification
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-success';
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.zIndex = '1000';
-            notification.style.width = '300px';
-            notification.innerHTML = `
-                <h3><i class="fas fa-check-circle"></i> Report Generated</h3>
-                <p>Report for ${dateRange} has been generated successfully.</p>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Remove notification after 3 seconds
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-
-        // Export to PDF function
-        function exportToPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            
-            // Add title
-            doc.setFontSize(20);
-            doc.text('Crispy Chicken UAE Performance Report', 20, 20);
-            
-            // Add date
-            doc.setFontSize(12);
-            doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 30);
-            
-            // Add summary data
-            doc.setFontSize(16);
-            doc.text('Executive Summary', 20, 50);
-            
-            doc.setFontSize(12);
-            doc.text(`Overall AOV Change: ${data.summary.aov_change}%`, 20, 70);
-            doc.text(`Order Volume Change: ${data.summary.orders_change}%`, 20, 80);
-            doc.text(`Sales Change: ${data.summary.sales_change}%`, 20, 90);
-            doc.text(`Delivery Performance Change: ${data.summary.delivery_time_change}%`, 20, 100);
-            
-            // Add branch performance table
-            doc.setFontSize(16);
-            doc.text('Branch Performance', 20, 120);
-            
-            const branchData = [
-                ['Branch', 'Location', 'AOV Change', 'Orders Change', 'Sales Change'],
-                ['Al Satwa', 'Dubai', '3.77%', '78.81%', '85.54%'],
-                ['Al Barsha', 'Dubai', '8.29%', '-14.11%', '-7.00%'],
-                ['Muroor', 'Abu Dhabi', '0.30%', '-15.17%', '-14.92%'],
-                ['Shabiya', 'Abu Dhabi', '-0.54%', '-7.85%', '-8.35%'],
-                ['Hamdan', 'Abu Dhabi', '-2.29%', '-13.90%', '-15.87%'],
-                ['Khalidiyah', 'Abu Dhabi', '-2.39%', '-17.98%', '-19.95%']
-            ];
-            
-            doc.autoTable({
-                head: [branchData[0]],
-                body: branchData.slice(1),
-                startY: 130,
-                theme: 'grid'
-            });
-            
-            // Save the PDF
-            doc.save('crispy_chicken_performance_report.pdf');
-            
-            // Show notification
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-success';
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.zIndex = '1000';
-            notification.style.width = '300px';
-            notification.innerHTML = `
-                <h3><i class="fas fa-check-circle"></i> PDF Exported</h3>
-                <p>Report has been exported successfully.</p>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Remove notification after 3 seconds
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-
         // Navigation functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set current date
-            setCurrentDate();
-            
-            // Initialize charts
-            initCharts();
-            
-            // Navigation functionality
-            document.querySelectorAll('.menu-item').forEach(item => {
+        function setupNavigation() {
+            const menuItems = document.querySelectorAll('.menu-item');
+            menuItems.forEach(item => {
                 item.addEventListener('click', function() {
-                    document.querySelectorAll('.menu-item').forEach(menu => menu.classList.remove('active'));
+                    const targetSection = this.getAttribute('data-section');
+                    
+                    // Update active menu item
+                    menuItems.forEach(mi => mi.classList.remove('active'));
                     this.classList.add('active');
                     
-                    const targetSection = this.dataset.section;
+                    // Update active section
                     document.querySelectorAll('.section').forEach(section => {
                         section.classList.remove('active');
                     });
                     document.getElementById(targetSection).classList.add('active');
                 });
             });
-            
-            // Tab functionality
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const tabContainer = this.parentElement;
-                    const tabContents = tabContainer.parentElement.querySelectorAll('.tab-content');
-                    
-                    // Update tab active state
-                    tabContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Show corresponding content
-                    const tabId = this.dataset.tab;
-                    tabContents.forEach(content => {
-                        content.classList.remove('active');
-                        if (content.id === tabId) {
-                            content.classList.add('active');
-                        }
+        }
+
+        // Tab functionality
+        function setupTabs() {
+            const tabContainers = document.querySelectorAll('.tabs');
+            tabContainers.forEach(container => {
+                const tabs = container.querySelectorAll('.tab');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        const targetTab = this.getAttribute('data-tab');
+                        
+                        // Update active tab
+                        tabs.forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        // Update active tab content
+                        const tabContents = container.nextElementSibling.querySelectorAll('.tab-content');
+                        tabContents.forEach(content => {
+                            content.classList.remove('active');
+                        });
+                        document.getElementById(targetTab).classList.add('active');
                     });
                 });
             });
+        }
+
+        // Utility functions
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function generateReport() {
+            showNotification('Report generated successfully!', 'success');
+        }
+
+        function exportToPDF() {
+            showNotification('Exporting to PDF...', 'success');
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(20);
+            doc.text('Crispy Chicken UAE Performance Dashboard', 20, 20);
+            
+            // Add date
+            doc.setFontSize(12);
+            doc.text(`Report Period: ${document.getElementById('startDate').value} to ${document.getElementById('endDate').value}`, 20, 35);
+            
+            // Add executive summary
+            doc.setFontSize(16);
+            doc.text('Executive Summary', 20, 55);
+            doc.setFontSize(12);
+            doc.text('Crispy Chicken UAE experienced a modest decline in performance from 2024 to 2025, with AOV down -0.91%, orders down -9.24%, and sales down -10.06%. However, Dubai branches outperformed Abu Dhabi locations.', 20, 70, { maxWidth: 170 });
+            
+            // Add key metrics
+            doc.setFontSize(16);
+            doc.text('Key Metrics', 20, 95);
+            doc.setFontSize(12);
+            const metrics = [
+                `Overall AOV Change: ${data.summary.aov_change}%`,
+                `Order Volume Change: ${data.summary.orders_change}%`,
+                `Total Sales Change: ${data.summary.sales_change}%`,
+                `Average Delivery Time: ${data.summary.avg_delivery_time_2025} min`,
+                `Delivery Accuracy: ${data.summary.delivery_accuracy_2025}%`
+            ];
+            
+            let yPos = 110;
+            metrics.forEach(metric => {
+                doc.text(metric, 20, yPos);
+                yPos += 10;
+            });
+            
+            // Add branch performance
+            doc.setFontSize(16);
+            doc.text('Branch Performance', 20, 170);
+            doc.setFontSize(12);
+            
+            // Create table data
+            const tableData = [
+                ['Branch', 'Location', 'AOV Change (%)', 'Orders Change (%)', 'Sales Change (%)']
+            ];
+            
+            Object.entries(data.branches).forEach(([branch, data]) => {
+                if (data.status !== 'Inactive') {
+                    tableData.push([
+                        branch,
+                        data.location,
+                        data.aov_change + '%',
+                        data.orders_change + '%',
+                        data.sales_change + '%'
+                    ]);
+                }
+            });
+            
+            // Add table to PDF
+            doc.autoTable({
+                head: [tableData[0]],
+                body: tableData.slice(1),
+                startY: 180,
+                theme: 'grid'
+            });
+            
+            // Save the PDF
+            doc.save('crispy-chicken-performance-report.pdf');
+            showNotification('PDF exported successfully!', 'success');
+        }
+
+        function refreshData() {
+            showNotification('Refreshing data...', 'success');
+            
+            // Simulate data refresh
+            setTimeout(() => {
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+                showNotification('Data refreshed successfully!', 'success');
+            }, 1000);
+        }
+
+        // Initialize current date
+        function updateCurrentDate() {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        // Update date range display
+        function updateDataRange() {
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const startFormatted = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            const endFormatted = endDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            document.getElementById('dataRange').textContent = `${startFormatted} - ${endFormatted}`;
+        }
+
+        // Initialize everything when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentDate();
+            updateDataRange();
+            initCharts();
+            setupNavigation();
+            setupTabs();
+            
+            // Add event listeners for date inputs
+            document.getElementById('startDate').addEventListener('change', updateDataRange);
+            document.getElementById('endDate').addEventListener('change', updateDataRange);
         });
     </script>
 </body>
