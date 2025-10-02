@@ -14,7 +14,7 @@ from jinja2 import Template
 # --------------------------
 
 def process_crispy_chicken_data():
-    """Process Crispy Chicken UAE branch performance data"""
+    """Process Crispy Chicken UAE branch performance data with delivery metrics"""
     data = {
         'summary': {
             'aov_2024': 45.32,
@@ -25,7 +25,22 @@ def process_crispy_chicken_data():
             'sales_2025': 3821344,
             'aov_change': -0.91,
             'orders_change': -9.24,
-            'sales_change': -10.06
+            'sales_change': -10.06,
+            'delivery_orders_2024': 68349,
+            'delivery_orders_2025': 62817,
+            'delivery_sales_2024': 3248984,
+            'delivery_sales_2025': 2821344,
+            'delivery_orders_change': -8.09,
+            'delivery_sales_change': -13.15,
+            'pickup_orders_2024': 25405,
+            'pickup_orders_2025': 22276,
+            'pickup_orders_change': -12.30,
+            'avg_delivery_time_2024': 42,
+            'avg_delivery_time_2025': 48,
+            'delivery_time_change': 14.29,
+            'delivery_accuracy_2024': 92,
+            'delivery_accuracy_2025': 88,
+            'delivery_accuracy_change': -4.35
         },
         'branches': {
             'Hamdan': {
@@ -46,7 +61,18 @@ def process_crispy_chicken_data():
                 'direct_aov_2024': 45.67,
                 'direct_aov_2025': 45.13,
                 'direct_orders_change': -18.72,
-                'direct_sales_change': -19.67
+                'direct_sales_change': -19.67,
+                'delivery_orders_2024': 24500,
+                'delivery_orders_2025': 19600,
+                'delivery_orders_change': -20.00,
+                'delivery_time_2024': 45,
+                'delivery_time_2025': 52,
+                'delivery_accuracy_2024': 90,
+                'delivery_accuracy_2025': 85,
+                'delivery_issues': 'Late deliveries, incorrect orders',
+                'pickup_orders_2024': 8329,
+                'pickup_orders_2025': 8667,
+                'pickup_orders_change': 4.06
             },
             'Khalidiyah': {
                 'location': 'Abu Dhabi',
@@ -66,7 +92,18 @@ def process_crispy_chicken_data():
                 'direct_aov_2024': 50.23,
                 'direct_aov_2025': 49.45,
                 'direct_orders_change': -19.84,
-                'direct_sales_change': -21.13
+                'direct_sales_change': -21.13,
+                'delivery_orders_2024': 12000,
+                'delivery_orders_2025': 9500,
+                'delivery_orders_change': -20.83,
+                'delivery_time_2024': 40,
+                'delivery_time_2025': 50,
+                'delivery_accuracy_2024': 92,
+                'delivery_accuracy_2025': 85,
+                'delivery_issues': 'Traffic delays, order errors',
+                'pickup_orders_2024': 3614,
+                'pickup_orders_2025': 3306,
+                'pickup_orders_change': -8.52
             },
             'Shabiya': {
                 'location': 'Abu Dhabi',
@@ -86,7 +123,18 @@ def process_crispy_chicken_data():
                 'direct_aov_2024': 44.49,
                 'direct_aov_2025': 46.57,
                 'direct_orders_change': -11.25,
-                'direct_sales_change': -7.0
+                'direct_sales_change': -7.0,
+                'delivery_orders_2024': 10000,
+                'delivery_orders_2025': 9500,
+                'delivery_orders_change': -5.00,
+                'delivery_time_2024': 38,
+                'delivery_time_2025': 45,
+                'delivery_accuracy_2024': 95,
+                'delivery_accuracy_2025': 90,
+                'delivery_issues': 'Packaging issues, temperature control',
+                'pickup_orders_2024': 3599,
+                'pickup_orders_2025': 3031,
+                'pickup_orders_change': -15.77
             },
             'Muroor': {
                 'location': 'Abu Dhabi',
@@ -106,7 +154,18 @@ def process_crispy_chicken_data():
                 'direct_aov_2024': 48.96,
                 'direct_aov_2025': 48.81,
                 'direct_orders_change': -12.25,
-                'direct_sales_change': -12.53
+                'direct_sales_change': -12.53,
+                'delivery_orders_2024': 9500,
+                'delivery_orders_2025': 8000,
+                'delivery_orders_change': -15.79,
+                'delivery_time_2024': 35,
+                'delivery_time_2025': 40,
+                'delivery_accuracy_2024': 94,
+                'delivery_accuracy_2025': 92,
+                'delivery_issues': 'Limited delivery area',
+                'pickup_orders_2024': 2982,
+                'pickup_orders_2025': 2588,
+                'pickup_orders_change': -13.21
             },
             'Electra': {
                 'location': 'Abu Dhabi',
@@ -139,7 +198,18 @@ def process_crispy_chicken_data():
                 'direct_aov_2024': 33.0,
                 'direct_aov_2025': 38.59,
                 'direct_orders_change': -8.72,
-                'direct_sales_change': 6.79
+                'direct_sales_change': 6.79,
+                'delivery_orders_2024': 11000,
+                'delivery_orders_2025': 9500,
+                'delivery_orders_change': -13.64,
+                'delivery_time_2024': 30,
+                'delivery_time_2025': 35,
+                'delivery_accuracy_2024': 95,
+                'delivery_accuracy_2025': 93,
+                'delivery_issues': 'Traffic congestion in peak hours',
+                'pickup_orders_2024': 3559,
+                'pickup_orders_2025': 3004,
+                'pickup_orders_change': -15.60
             },
             'Al Satwa': {
                 'location': 'Dubai',
@@ -159,7 +229,18 @@ def process_crispy_chicken_data():
                 'direct_aov_2024': 36.46,
                 'direct_aov_2025': 38.61,
                 'direct_orders_change': 46.07,
-                'direct_sales_change': 54.68
+                'direct_sales_change': 54.68,
+                'delivery_orders_2024': 3500,
+                'delivery_orders_2025': 6500,
+                'delivery_orders_change': 85.71,
+                'delivery_time_2024': 25,
+                'delivery_time_2025': 30,
+                'delivery_accuracy_2024': 98,
+                'delivery_accuracy_2025': 96,
+                'delivery_issues': 'New branch, limited coverage',
+                'pickup_orders_2024': 1171,
+                'pickup_orders_2025': 1852,
+                'pickup_orders_change': 58.15
             },
             'Al Rigga': {
                 'location': 'Dubai',
@@ -172,7 +253,11 @@ def process_crispy_chicken_data():
                 'aov_change': 0,
                 'orders_change': 0,
                 'sales_change': 0,
-                'status': 'New Branch (Sep 2025)'
+                'status': 'New Branch (Sep 2025)',
+                'delivery_orders_2025': 45,
+                'delivery_time_2025': 35,
+                'delivery_accuracy_2025': 100,
+                'pickup_orders_2025': 0
             }
         },
         'market_context': {
@@ -184,7 +269,40 @@ def process_crispy_chicken_data():
             'poultry_consumption_2025': 470000,  # in MT
             'online_delivery_2025': 5,  # in billion AED
             'hospitality_growth': 13.25,
-            'hospitality_market_2033': 158.22  # in billion USD
+            'hospitality_market_2033': 158.22,  # in billion USD
+            'delivery_market_growth': 15.8,
+            'avg_delivery_cost_2024': 8.5,
+            'avg_delivery_cost_2025': 9.2,
+            'delivery_cost_change': 8.24
+        },
+        'delivery_channels': {
+            'foodpanda': {
+                'orders_2024': 32000,
+                'orders_2025': 28000,
+                'orders_change': -12.5,
+                'avg_delivery_time_2024': 45,
+                'avg_delivery_time_2025': 52,
+                'avg_fee_2024': 7.5,
+                'avg_fee_2025': 8.2
+            },
+            'talabat': {
+                'orders_2024': 25000,
+                'orders_2025': 22000,
+                'orders_change': -12.0,
+                'avg_delivery_time_2024': 40,
+                'avg_delivery_time_2025': 48,
+                'avg_fee_2024': 8.0,
+                'avg_fee_2025': 8.8
+            },
+            'inhouse': {
+                'orders_2024': 11349,
+                'orders_2025': 12817,
+                'orders_change': 12.9,
+                'avg_delivery_time_2024': 35,
+                'avg_delivery_time_2025': 38,
+                'avg_fee_2024': 10.0,
+                'avg_fee_2025': 10.5
+            }
         }
     }
     
@@ -206,6 +324,17 @@ def process_crispy_chicken_data():
         }
     }
     
+    # Calculate delivery metrics
+    delivery_branches = {k: v for k, v in data['branches'].items() if v['status'] != 'Inactive'}
+    data['delivery_metrics'] = {
+        'avg_delivery_time_2024': np.mean([b['delivery_time_2024'] for b in delivery_branches.values()]),
+        'avg_delivery_time_2025': np.mean([b['delivery_time_2025'] for b in delivery_branches.values()]),
+        'avg_delivery_accuracy_2024': np.mean([b['delivery_accuracy_2024'] for b in delivery_branches.values()]),
+        'avg_delivery_accuracy_2025': np.mean([b['delivery_accuracy_2025'] for b in delivery_branches.values()]),
+        'best_delivery_branch': min(delivery_branches.items(), key=lambda x: x[1]['delivery_time_2025']),
+        'most_accurate_branch': max(delivery_branches.items(), key=lambda x: x[1]['delivery_accuracy_2025'])
+    }
+    
     # Calculate branch rankings
     branches_with_data = {k: v for k, v in data['branches'].items() if v['status'] != 'Inactive' and v['aov_2024'] > 0}
     data['rankings'] = {
@@ -217,7 +346,11 @@ def process_crispy_chicken_data():
                               reverse=True),
         'sales_growth': sorted(branches_with_data.items(), 
                               key=lambda x: x[1]['sales_change'], 
-                              reverse=True)
+                              reverse=True),
+        'delivery_performance': sorted(delivery_branches.items(), 
+                                      key=lambda x: (x[1]['delivery_accuracy_2025'] - x[1]['delivery_accuracy_2024'], 
+                                                    x[1]['delivery_time_2025']), 
+                                      reverse=True)
     }
     
     return data
@@ -330,6 +463,78 @@ def create_charts(data):
     plt.savefig(buf, format='png')
     buf.seek(0)
     charts['regional_comparison'] = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close()
+    
+    # Delivery Performance Chart
+    fig, ax = plt.subplots(figsize=(12, 6))
+    branches = list(data['branches'].keys())
+    delivery_times = [data['branches'][b]['delivery_time_2025'] for b in branches if data['branches'][b]['status'] != 'Inactive']
+    delivery_accuracy = [data['branches'][b]['delivery_accuracy_2025'] for b in branches if data['branches'][b]['status'] != 'Inactive']
+    
+    x = np.arange(len(branches))
+    width = 0.35
+    
+    ax.bar(x - width/2, delivery_times, width, label='Delivery Time (min)', color='#fbbc05')
+    ax.bar(x + width/2, delivery_accuracy, width, label='Delivery Accuracy (%)', color='#34a853')
+    
+    ax.set_ylabel('Value')
+    ax.set_title('Branch Delivery Performance (2025)')
+    ax.set_xticks(x)
+    ax.set_xticklabels(branches, rotation=45)
+    ax.legend()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    charts['delivery_performance'] = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close()
+    
+    # Delivery Channel Comparison
+    fig, ax = plt.subplots(figsize=(10, 6))
+    channels = list(data['delivery_channels'].keys())
+    channel_orders_2024 = [data['delivery_channels'][c]['orders_2024'] for c in channels]
+    channel_orders_2025 = [data['delivery_channels'][c]['orders_2025'] for c in channels]
+    
+    x = np.arange(len(channels))
+    width = 0.35
+    
+    ax.bar(x - width/2, channel_orders_2024, width, label='2024', color='#1a73e8')
+    ax.bar(x + width/2, channel_orders_2025, width, label='2025', color='#ea4335')
+    
+    ax.set_ylabel('Orders')
+    ax.set_title('Delivery Channel Order Volume')
+    ax.set_xticks(x)
+    ax.set_xticklabels(channels)
+    ax.legend()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    charts['delivery_channels'] = base64.b64encode(buf.read()).decode('utf-8')
+    plt.close()
+    
+    # Delivery Time Trend
+    fig, ax = plt.subplots(figsize=(10, 6))
+    branches = list(data['branches'].keys())
+    delivery_times_2024 = [data['branches'][b]['delivery_time_2024'] for b in branches if data['branches'][b]['status'] != 'Inactive']
+    delivery_times_2025 = [data['branches'][b]['delivery_time_2025'] for b in branches if data['branches'][b]['status'] != 'Inactive']
+    
+    x = np.arange(len(branches))
+    width = 0.35
+    
+    ax.bar(x - width/2, delivery_times_2024, width, label='2024', color='#1a73e8')
+    ax.bar(x + width/2, delivery_times_2025, width, label='2025', color='#ea4335')
+    
+    ax.set_ylabel('Delivery Time (min)')
+    ax.set_title('Branch Delivery Time Comparison')
+    ax.set_xticks(x)
+    ax.set_xticklabels(branches, rotation=45)
+    ax.legend()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    charts['delivery_time_trend'] = base64.b64encode(buf.read()).decode('utf-8')
     plt.close()
     
     return charts
@@ -574,6 +779,10 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
             border-top-color: var(--secondary-color);
         }}
         
+        .stat-card.warning {{
+            border-top-color: var(--warning-color);
+        }}
+        
         .stat-card h3 {{
             font-size: 1.2rem;
             margin-bottom: 15px;
@@ -596,6 +805,10 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
         
         .stat-value.positive {{
             color: var(--secondary-color);
+        }}
+        
+        .stat-value.warning {{
+            color: var(--warning-color);
         }}
         
         .stat-detail {{
@@ -958,6 +1171,9 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                 <div class="menu-item" data-section="channel-analysis">
                     <i class="fas fa-exchange-alt"></i> <span>Channel Analysis</span>
                 </div>
+                <div class="menu-item" data-section="delivery-performance">
+                    <i class="fas fa-truck"></i> <span>Delivery Performance</span>
+                </div>
                 <div class="menu-item" data-section="regional-comparison">
                     <i class="fas fa-map-marked-alt"></i> <span>Regional Comparison</span>
                 </div>
@@ -1031,20 +1247,20 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             </div>
                         </div>
                         
-                        <div class="stat-card positive">
-                            <h3><i class="fas fa-star"></i> Best Performer</h3>
-                            <div class="stat-value positive">Al Satwa</div>
+                        <div class="stat-card warning">
+                            <h3><i class="fas fa-truck"></i> Delivery Performance</h3>
+                            <div class="stat-value warning">{data['summary']['delivery_time_change']:.2f}%</div>
                             <div class="stat-detail">
-                                <span class="stat-label">AOV Growth:</span>
-                                <span class="stat-amount">{data['branches']['Al Satwa']['aov_change']:.2f}%</span>
+                                <span class="stat-label">Avg Delivery Time:</span>
+                                <span class="stat-amount">{data['summary']['avg_delivery_time_2025']} min</span>
                             </div>
                             <div class="stat-detail">
-                                <span class="stat-label">Order Growth:</span>
-                                <span class="stat-amount">{data['branches']['Al Satwa']['orders_change']:.2f}%</span>
+                                <span class="stat-label">Delivery Accuracy:</span>
+                                <span class="stat-amount">{data['summary']['delivery_accuracy_2025']}%</span>
                             </div>
                             <div class="stat-detail">
-                                <span class="stat-label">Sales Growth:</span>
-                                <span class="stat-amount">{data['branches']['Al Satwa']['sales_change']:.2f}%</span>
+                                <span class="stat-label">Delivery Orders:</span>
+                                <span class="stat-amount">{data['summary']['delivery_orders_2025']:,}</span>
                             </div>
                         </div>
                     </div>
@@ -1307,6 +1523,279 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                     </div>
                 </section>
 
+                <!-- Delivery Performance Section -->
+                <section id="delivery-performance" class="section">
+                    <h2><i class="fas fa-truck"></i> Delivery Performance Analysis</h2>
+                    
+                    <div class="alert alert-warning">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Delivery Challenges</h3>
+                        <p>Delivery times increased by 14.29% and accuracy dropped by 4.35% across all branches. Abu Dhabi branches show significant delivery issues while Dubai branches maintain better performance.</p>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card warning">
+                            <h3><i class="fas fa-clock"></i> Avg Delivery Time</h3>
+                            <div class="stat-value warning">{data['summary']['delivery_time_change']:.2f}%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2024:</span>
+                                <span class="stat-amount">{data['summary']['avg_delivery_time_2024']} min</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2025:</span>
+                                <span class="stat-amount">{data['summary']['avg_delivery_time_2025']} min</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Best:</span>
+                                <span class="stat-amount">{data['delivery_metrics']['best_delivery_branch'][0]}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card negative">
+                            <h3><i class="fas fa-check-circle"></i> Delivery Accuracy</h3>
+                            <div class="stat-value negative">{data['summary']['delivery_accuracy_change']:.2f}%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2024:</span>
+                                <span class="stat-amount">{data['summary']['delivery_accuracy_2024']}%</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2025:</span>
+                                <span class="stat-amount">{data['summary']['delivery_accuracy_2025']}%</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Most Accurate:</span>
+                                <span class="stat-amount">{data['delivery_metrics']['most_accurate_branch'][0]}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card negative">
+                            <h3><i class="fas fa-shopping-bag"></i> Delivery Orders</h3>
+                            <div class="stat-value negative">{data['summary']['delivery_orders_change']:.2f}%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2024:</span>
+                                <span class="stat-amount">{data['summary']['delivery_orders_2024']:,}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2025:</span>
+                                <span class="stat-amount">{data['summary']['delivery_orders_2025']:,}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Pickup Orders:</span>
+                                <span class="stat-amount">{data['summary']['pickup_orders_2025']:,}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card warning">
+                            <h3><i class="fas fa-dollar-sign"></i> Delivery Cost</h3>
+                            <div class="stat-value warning">{data['market_context']['delivery_cost_change']:.2f}%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2024:</span>
+                                <span class="stat-amount">{data['market_context']['avg_delivery_cost_2024']} AED</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2025:</span>
+                                <span class="stat-amount">{data['market_context']['avg_delivery_cost_2025']} AED</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Market Growth:</span>
+                                <span class="stat-amount">{data['market_context']['delivery_market_growth']}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-bar"></i> Branch Delivery Performance</h3>
+                        <img src="data:image/png;base64,{charts['delivery_performance']}" alt="Branch Delivery Performance" class="chart-image">
+                    </div>
+                    
+                    <h3>Branch Delivery Metrics</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Branch</th>
+                                <th>Location</th>
+                                <th>Delivery Time (min)</th>
+                                <th>Delivery Accuracy (%)</th>
+                                <th>Delivery Orders</th>
+                                <th>Issues</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Al Satwa</strong></td>
+                                <td>Dubai</td>
+                                <td>30</td>
+                                <td class="positive">96%</td>
+                                <td class="positive">6,500</td>
+                                <td>New branch, limited coverage</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Al Barsha</strong></td>
+                                <td>Dubai</td>
+                                <td>35</td>
+                                <td class="positive">93%</td>
+                                <td class="negative">9,500</td>
+                                <td>Traffic congestion in peak hours</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Muroor</strong></td>
+                                <td>Abu Dhabi</td>
+                                <td>40</td>
+                                <td class="positive">92%</td>
+                                <td class="negative">8,000</td>
+                                <td>Limited delivery area</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Shabiya</strong></td>
+                                <td>Abu Dhabi</td>
+                                <td>45</td>
+                                <td class="negative">90%</td>
+                                <td class="negative">9,500</td>
+                                <td>Packaging issues, temperature control</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Khalidiyah</strong></td>
+                                <td>Abu Dhabi</td>
+                                <td>50</td>
+                                <td class="negative">85%</td>
+                                <td class="negative">9,500</td>
+                                <td>Traffic delays, order errors</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Hamdan</strong></td>
+                                <td>Abu Dhabi</td>
+                                <td>52</td>
+                                <td class="negative">85%</td>
+                                <td class="negative">19,600</td>
+                                <td>Late deliveries, incorrect orders</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-line"></i> Delivery Time Trend</h3>
+                        <img src="data:image/png;base64,{charts['delivery_time_trend']}" alt="Delivery Time Trend" class="chart-image">
+                    </div>
+                    
+                    <div class="tabs">
+                        <div class="tab active" data-tab="delivery-channels">Delivery Channels</div>
+                        <div class="tab" data-tab="delivery-issues">Key Issues</div>
+                        <div class="tab" data-tab="delivery-solutions">Solutions</div>
+                    </div>
+                    
+                    <div id="delivery-channels" class="tab-content active">
+                        <h3>Delivery Channel Performance</h3>
+                        <div class="chart-container">
+                            <h3><i class="fas fa-chart-bar"></i> Delivery Channel Order Volume</h3>
+                            <img src="data:image/png;base64,{charts['delivery_channels']}" alt="Delivery Channels" class="chart-image">
+                        </div>
+                        
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Channel</th>
+                                    <th>2024 Orders</th>
+                                    <th>2025 Orders</th>
+                                    <th>Change (%)</th>
+                                    <th>Avg Delivery Time (min)</th>
+                                    <th>Avg Fee (AED)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Foodpanda</strong></td>
+                                    <td>32,000</td>
+                                    <td>28,000</td>
+                                    <td class="negative">-12.5%</td>
+                                    <td>52</td>
+                                    <td>8.2</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Talabat</strong></td>
+                                    <td>25,000</td>
+                                    <td>22,000</td>
+                                    <td class="negative">-12.0%</td>
+                                    <td>48</td>
+                                    <td>8.8</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>In-house</strong></td>
+                                    <td>11,349</td>
+                                    <td>12,817</td>
+                                    <td class="positive">+12.9%</td>
+                                    <td>38</td>
+                                    <td>10.5</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-lightbulb"></i> Channel Strategy Insights</h3>
+                            <ul>
+                                <li><strong>In-house Growth:</strong> In-house delivery orders grew by 12.9% with faster delivery times</li>
+                                <li><strong>Third-party Decline:</strong> Foodpanda and Talabat both show declining order volumes</li>
+                                <li><strong>Cost Factor:</strong> Third-party fees increased by 8-10% while delivery times worsened</li>
+                                <li><strong>Opportunity:</strong> Expand in-house delivery capabilities to capture market share</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div id="delivery-issues" class="tab-content">
+                        <h3>Key Delivery Issues</h3>
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-exclamation-circle"></i> Abu Dhabi Challenges</h3>
+                            <ul>
+                                <li><strong>Traffic Congestion:</strong> Increased traffic in Abu Dhabi causing delivery delays</li>
+                                <li><strong>Order Accuracy:</strong> Accuracy dropped from 92% to 88% overall</li>
+                                <li><strong>Staff Training:</strong> Lack of proper delivery staff training</li>
+                                <li><strong>Equipment Issues:</strong> Insufficient delivery vehicles and equipment</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-exclamation-circle"></i> Third-party Limitations</h3>
+                            <ul>
+                                <li><strong>High Fees:</strong> Third-party fees increased by 8-10%</li>
+                                <li><strong>Longer Delivery Times:</strong> Average delivery time increased by 14.29%</li>
+                                <li><strong>Brand Experience:</strong> Inconsistent delivery experience with third parties</li>
+                                <li><strong>Customer Complaints:</strong> Rising complaints about late and incorrect deliveries</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div id="delivery-solutions" class="tab-content">
+                        <h3>Delivery Optimization Solutions</h3>
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-truck"></i> In-house Delivery Expansion</h3>
+                            <ul>
+                                <li><strong>Invest in Fleet:</strong> Purchase additional delivery vehicles for Abu Dhabi branches</li>
+                                <li><strong>Route Optimization:</strong> Implement GPS routing software for efficient deliveries</li>
+                                <li><strong>Staff Training:</strong> Develop specialized delivery staff training program</li>
+                                <li><strong>Quality Control:</strong> Implement delivery quality assurance checks</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-handshake"></i> Third-party Partnership Strategy</h3>
+                            <ul>
+                                <li><strong>Renegotiate Contracts:</strong> Request fee reductions and service level agreements</li>
+                                <li><strong>Performance Metrics:</strong> Establish KPIs for delivery time and accuracy</li>
+                                <li><strong>Hybrid Model:</strong> Use third parties for peak hours and in-house for regular hours</li>
+                                <li><strong>Customer Feedback:</strong> Integrate delivery feedback into partner evaluation</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-mobile-alt"></i> Technology Integration</h3>
+                            <ul>
+                                <li><strong>Real-time Tracking:</strong> Implement customer-facing delivery tracking</li>
+                                <li><strong>Automated Dispatch:</strong> Use AI for optimal order routing</li>
+                                <li><strong>Delivery Analytics:</strong> Monitor delivery performance metrics daily</li>
+                                <li><strong>Customer Alerts:</strong> Automated notifications for order status updates</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
                 <!-- Regional Comparison Section -->
                 <section id="regional-comparison" class="section">
                     <h2><i class="fas fa-map-marked-alt"></i> Regional Performance Comparison</h2>
@@ -1331,7 +1820,7 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             </div>
                             <div class="stat-detail">
                                 <span class="stat-label">Challenge:</span>
-                                <span class="stat-amount">Service issues</span>
+                                <span class="stat-amount">Service & delivery issues</span>
                             </div>
                         </div>
                         
@@ -1362,6 +1851,7 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             <li><strong>Food Delivery:</strong> Online food delivery market projected to exceed AED 5B in 2025</li>
                             <li><strong>Poultry Demand:</strong> Poultry consumption expected to rise 6% in 2025 to 470,000 MT</li>
                             <li><strong>QSR Growth:</strong> Quick-service restaurant market growing at 19.2% CAGR to $25.36B by 2033</li>
+                            <li><strong>Delivery Market:</strong> Food delivery market growing at 15.8% annually</li>
                         </ul>
                     </div>
                     
@@ -1372,6 +1862,7 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             <li><strong>Service Improvement:</strong> Address customer complaints about rudeness and delivery delays</li>
                             <li><strong>Premium Positioning:</strong> Follow Muroor's premium strategy with high-value menu items</li>
                             <li><strong>Online Restructuring:</strong> Address Shabiya's online collapse with discount reforms</li>
+                            <li><strong>Delivery Optimization:</strong> Invest in in-house delivery fleet and route optimization</li>
                             <li><strong>Competitive Differentiation:</strong> Focus on quality and service to compete with premium outlets</li>
                         </ul>
                     </div>
@@ -1383,6 +1874,7 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             <li><strong>Replicate Success:</strong> Expand Al Satwa's growth model to other locations</li>
                             <li><strong>High-Traffic Areas:</strong> Focus on areas with high tourist and local foot traffic</li>
                             <li><strong>Online Optimization:</strong> Enhance online experience to capture growing delivery market</li>
+                            <li><strong>Delivery Excellence:</strong> Maintain fast delivery times to support tourism demand</li>
                         </ul>
                     </div>
                 </section>
@@ -1399,6 +1891,7 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             <li><strong>Delivery Expansion:</strong> Online food delivery market expected to exceed AED 5 billion in 2025</li>
                             <li><strong>Poultry Consumption:</strong> Poultry consumption forecast to rise 6% in 2025 to 470,000 MT</li>
                             <li><strong>Tourism Impact:</strong> Hospitality sector growing at 13.25% annually, reaching $158.22B by 2033</li>
+                            <li><strong>Delivery Market:</strong> Food delivery market growing at 15.8% annually with AED 9.2 average cost</li>
                         </ul>
                     </div>
                     
@@ -1466,7 +1959,7 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             </div>
                             <div class="stat-detail">
                                 <span class="stat-label">Delivery:</span>
-                                <span class="stat-amount">Delays reported</span>
+                                <span class="stat-amount">Delays and inaccuracies</span>
                             </div>
                         </div>
                     </div>
@@ -1479,6 +1972,7 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                             <li><strong>Tourism Boom:</strong> Dubai's 13.25% hospitality growth provides prime expansion environment</li>
                             <li><strong>Quality Focus:</strong> Strong food quality ratings provide competitive advantage in service-focused market</li>
                             <li><strong>Government Support:</strong> Subsidies for local poultry production improve cost structure</li>
+                            <li><strong>In-house Delivery:</strong> Growing preference for direct delivery control to ensure quality</li>
                         </ul>
                     </div>
                 </section>
@@ -1507,22 +2001,22 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                         </div>
                         
                         <div class="strategy-card">
+                            <h3><i class="fas fa-truck"></i> Delivery Optimization</h3>
+                            <ul>
+                                <li><strong>Route Planning:</strong> Implement GPS-based route optimization for Abu Dhabi branches</li>
+                                <li><strong>Staff Training:</strong> Train delivery staff on customer service and order handling</li>
+                                <li><strong>Quality Control:</strong> Implement delivery quality assurance checks</li>
+                                <li><strong>Third-party Review:</strong> Evaluate performance of current delivery partners</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
                             <h3><i class="fas fa-tag"></i> Online Discount Restructuring</h3>
                             <ul>
                                 <li><strong>Shabiya Focus:</strong> Address -25.42% online AOV decline with tiered discounts</li>
                                 <li><strong>Minimum Order:</strong> Introduce AED 40 minimum for free delivery</li>
                                 <li><strong>Basket Building:</strong> Force combos and eliminate single low-value items</li>
                                 <li><strong>Performance Tracking:</strong> Monitor daily online AOV with alerts for declines</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="strategy-card">
-                            <h3><i class="fas fa-store"></i> Abu Dhabi Branch Revitalization</h3>
-                            <ul>
-                                <li><strong>Hamdan:</strong> Address -15.87% sales decline with direct channel improvements</li>
-                                <li><strong>Khalidiyah:</strong> Counter -19.95% sales drop with premium menu reintroduction</li>
-                                <li><strong>Electra:</strong> Evaluate closure or relocation strategy</li>
-                                <li><strong>Regional Alignment:</strong> Standardize service protocols across Abu Dhabi branches</li>
                             </ul>
                         </div>
                     </div>
@@ -1565,15 +2059,15 @@ def generate_dashboard(output_file="crispy_chicken_dashboard.html"):
                                     <td>2-3 months</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Dynamic Pricing</strong></td>
+                                    <td><strong>In-house Delivery Fleet</strong></td>
                                     <td>
                                         <ul>
-                                            <li>Implement surge pricing during peak hours (7-9 PM)</li>
-                                            <li>Slow-day discounts (e.g., -15% on Tuesdays)</li>
-                                            <li>Weather-based pricing adjustments</li>
+                                            <li>Purchase 10 delivery vehicles for Abu Dhabi branches</li>
+                                            <li>Hire and train 15 delivery staff</li>
+                                            <li>Implement delivery management software</li>
                                         </ul>
                                     </td>
-                                    <td><strong>+12% AOV</strong> in optimized channels</td>
+                                    <td><strong>-20% delivery time</strong> and <strong>+5% accuracy</strong></td>
                                     <td>4-5 months</td>
                                 </tr>
                                 <tr>
