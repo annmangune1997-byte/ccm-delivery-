@@ -1,1027 +1,1621 @@
-import pandas as pd
-import numpy as np
-from datetime import datetime
-import plotly.express as px
-import plotly.io as pio
-import random
-import json
-import os
-
-# --------------------------
-# --- REAL DATA PARSING ---
-# --------------------------
-
-def parse_branch_data(branch_data_text):
-    """Parse the provided branch data text into a structured format"""
-    branch_mapping = {
-        'Khalidiya': 'Al_Khalidiyah',
-        'Shabiya': 'Shabiya_11',
-        'Barsha': 'Al_Barsha',
-        'Satwa': 'Al_Satwa',
-        'Al Rigga': 'Al_Rigga',
-        'Electra': 'Electra'
-    }
-    
-    # Split text into sections by branch
-    sections = branch_data_text.strip().split('\n\n')
-    branch_data = {}
-    
-    for section in sections:
-        lines = section.strip().split('\n')
-        if not lines:
-            continue
-            
-        # Extract branch name
-        branch_name = lines[0].strip()
-        if branch_name == 'Month':
-            continue  # Skip if it's the header
-            
-        # Map to internal branch name
-        internal_branch = branch_mapping.get(branch_name, branch_name)
-        
-        # Initialize data structure
-        branch_data[internal_branch] = {
-            '2024_sales': [],
-            '2024_orders': [],
-            '2025_sales': [],
-            '2025_orders': []
-        }
-        
-        # Process data rows
-        for line in lines[1:]:  # Skip branch name and header
-            if line.startswith('Month'):
-                continue
-            if not line.strip():
-                continue
-                
-            parts = line.split('\t')
-            if len(parts) < 8:  # Ensure we have enough columns
-                continue
-                
-            try:
-                # Extract 2024 data
-                orders_2024 = float(parts[5].replace(',', ''))
-                sales_2024 = float(parts[6].replace(',', ''))
-                
-                # Extract 2025 data
-                orders_2025 = float(parts[1].replace(',', ''))
-                sales_2025 = float(parts[2].replace(',', ''))
-                
-                # Append to lists
-                branch_data[internal_branch]['2024_orders'].append(orders_2024)
-                branch_data[internal_branch]['2024_sales'].append(sales_2024)
-                branch_data[internal_branch]['2025_orders'].append(orders_2025)
-                branch_data[internal_branch]['2025_sales'].append(sales_2025)
-                
-            except (ValueError, IndexError) as e:
-                print(f"Error processing line: {line}. Error: {e}")
-                continue
-    
-    return branch_data
-
-# --------------------------
-# --- DASHBOARD GENERATION ---
-# --------------------------
-
-def generate_dashboard_html(branch_data, output_file="Crispy_Chicken_Dashboard.html"):
-    """Generate the complete dashboard HTML with real data"""
-    
-    # Calculate key metrics
-    total_revenue_2024 = sum(sum(branch_data[branch]['2024_sales']) for branch in branch_data)
-    total_revenue_2025 = sum(sum(branch_data[branch]['2025_sales']) for branch in branch_data)
-    growth_rate = ((total_revenue_2025 - total_revenue_2024) / total_revenue_2024) * 100 if total_revenue_2024 > 0 else 0
-    
-    # Create dashboard data structure
-    dashboard_data = {
-        'branches': list(branch_data.keys()),
-        'branchNames': {name: f"Crispy Chicken - {name}" for name in branch_data.keys()},
-        'months': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        'monthNames': {month: month for month in ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']},
-        'data2024': {
-            'sales': {},
-            'orders': {}
-        },
-        'data2025': {
-            'sales': {},
-            'orders': {}
-        },
-        'userEntries': []
-    }
-    
-    # Populate data structure
-    for branch in branch_data:
-        dashboard_data['data2024']['sales'][branch] = branch_data[branch]['2024_sales']
-        dashboard_data['data2024']['orders'][branch] = branch_data[branch]['2024_orders']
-        dashboard_data['data2025']['sales'][branch] = branch_data[branch]['2025_sales']
-        dashboard_data['data2025']['orders'][branch] = branch_data[branch]['2025_orders']
-    
-    # Calculate year metrics
-    def calculate_year_metrics(year):
-        data_year = dashboard_data[f'data{year}']
-        total_sales = sum(sum(data_year['sales'][branch]) for branch in dashboard_data['branches'])
-        total_orders = sum(sum(data_year['orders'][branch]) for branch in dashboard_data['branches'])
-        avg_order_value = total_sales / total_orders if total_orders > 0 else 0
-        
-        # Calculate delivery metrics (assuming 81.4% for 2024 and 68.1% for 2025)
-        delivery_percentage = 0.814 if year == 2024 else 0.681
-        total_delivery_sales = total_sales * delivery_percentage
-        total_delivery_orders = total_orders * delivery_percentage
-        avg_delivery_value = total_delivery_sales / total_delivery_orders if total_delivery_orders > 0 else 0
-        
-        return {
-            "totalSales": total_sales,
-            "totalOrders": total_orders,
-            "averageOrderValue": avg_order_value,
-            "totalDeliverySales": total_delivery_sales,
-            "totalDeliveryOrders": total_delivery_orders,
-            "averageDeliveryValue": avg_delivery_value,
-            "deliveryPercentage": delivery_percentage * 100
-        }
-    
-    metrics2024 = calculate_year_metrics(2024)
-    metrics2025 = calculate_year_metrics(2025)
-    
-    # Generate HTML content
-    html_content = f"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced Crispy Chicken Dashboard</title>
+    <title>AOV Validation & Pricing Strategy - Jan-Sep Comparison</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {{
-            --primary-color: #e74c3c;
-            --secondary-color: #f39c12;
-            --success-color: #27ae60;
-            --dark-color: #2c3e50;
-            --light-color: #ecf0f1;
-            --danger-color: #c0392b;
-            --warning-color: #d68910;
-            --online-color: #3498db;
-            --year2024-color: #e74c3c;
-            --year2025-color: #3498db;
-        }}
-        
-        * {{
+        :root {
+            --primary-color: #1a73e8;
+            --secondary-color: #34a853;
+            --accent-color: #ea4335;
+            --warning-color: #fbbc05;
+            --dark-color: #202124;
+            --light-color: #f8f9fa;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s ease;
+        }
+
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }}
-        
-        body {{
-            font-family: 'Roboto', sans-serif;
-            background-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f5f7fa;
             color: var(--dark-color);
             line-height: 1.6;
-        }}
-        
-        .container {{
+        }
+
+        .container {
             max-width: 1600px;
             margin: 0 auto;
             padding: 20px;
-        }}
-        
-        header {{
-            background: linear-gradient(135deg, var(--primary-color), var(--danger-color));
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, var(--primary-color), #0d47a1);
             color: white;
             padding: 30px 0;
             border-radius: 10px;
             margin-bottom: 30px;
-            text-align: center;
+            box-shadow: var(--card-shadow);
             position: relative;
             overflow: hidden;
-        }}
-        
-        header::before {{
-            content: '';
+        }
+
+        header::before {
+            content: "";
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff20" fill-opacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,144C960,149,1056,139,1152,128C1248,117,1344,107,1392,101.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-            background-size: cover;
-        }}
-        
-        h1 {{
-            font-size: 2.8rem;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            transform: rotate(30deg);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
             font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
             position: relative;
             z-index: 1;
-        }}
-        
-        .subtitle {{
-            text-align: center;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        header .subtitle {
             font-size: 1.2rem;
-            margin-top: 10px;
             opacity: 0.9;
             position: relative;
             z-index: 1;
-        }}
-        
-        .year-selector {{
-            background: rgba(255, 255, 255, 0.2);
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px auto;
-            max-width: 1000px;
-            text-align: center;
-            backdrop-filter: blur(10px);
-        }}
-        
-        .year-buttons {{
+        }
+
+        /* Period Selector */
+        .period-selector {
             display: flex;
             justify-content: center;
-            gap: 20px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }}
-        
-        .year-btn {{
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 25px;
-            border-radius: 25px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }}
-        
-        .year-btn:hover {{
-            transform: translateY(-2px);
-        }}
-        
-        .year-btn.active {{
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-        }}
-        
-        .dashboard {{
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 30px;
-        }}
-        
-        .sidebar {{
+            margin-bottom: 30px;
             background: white;
-            border-radius: 15px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .period-info {
+            text-align: center;
+            padding: 0 30px;
+        }
+
+        .period-info h3 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .period-info p {
+            font-size: 1.1rem;
+            color: #5f6368;
+        }
+
+        .period-divider {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+        }
+
+        .period-divider i {
+            font-size: 2rem;
+            color: var(--warning-color);
+        }
+
+        /* Dashboard Layout */
+        .dashboard {
+            display: flex;
+            gap: 25px;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
             padding: 25px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
             height: fit-content;
             position: sticky;
             top: 20px;
-        }}
-        
-        .sidebar h2 {{
-            margin-bottom: 25px;
-            color: var(--dark-color);
+        }
+
+        .sidebar h2 {
             font-size: 1.5rem;
-            border-bottom: 3px solid var(--primary-color);
-            padding-bottom: 12px;
-        }}
-        
-        .menu-item {{
-            padding: 15px 20px;
-            margin-bottom: 15px;
-            border-radius: 12px;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-item {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: var(--transition);
             display: flex;
             align-items: center;
             gap: 12px;
             font-weight: 500;
-        }}
-        
-        .menu-item:hover {{
+        }
+
+        .menu-item:hover {
+            background: #f1f3f4;
+        }
+
+        .menu-item.active {
             background: var(--primary-color);
             color: white;
-            transform: translateX(8px);
-        }}
-        
-        .menu-item.active {{
-            background: var(--primary-color);
-            color: white;
-        }}
-        
-        .menu-item i {{
-            font-size: 1.3rem;
-            width: 24px;
-        }}
-        
-        .content {{
+        }
+
+        /* Content Styles */
+        .content {
+            flex: 1;
             background: white;
-            border-radius: 15px;
-            padding: 35px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-        }}
-        
-        .section {{
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            padding: 30px;
+        }
+
+        .section {
             display: none;
-        }}
-        
-        .section.active {{
+        }
+
+        .section.active {
             display: block;
-        }}
-        
-        .section h2 {{
-            color: var(--dark-color);
-            margin-bottom: 30px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section h2 {
             font-size: 2rem;
-            border-bottom: 3px solid var(--primary-color);
-            padding-bottom: 15px;
-        }}
-        
-        .stats-grid {{
+            margin-bottom: 20px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }}
-        
-        .stat-card {{
-            background: linear-gradient(135deg, #fff, #f8f9fa);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            border-left: 5px solid;
-        }}
-        
-        .stat-card.year2024 {{
-            border-color: var(--year2024-color);
-        }}
-        
-        .stat-card.year2025 {{
-            border-color: var(--year2025-color);
-        }}
-        
-        .stat-card.total {{
-            border-color: var(--success-color);
-        }}
-        
-        .stat-card h3 {{
-            color: var(--dark-color);
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }}
-        
-        .stat-value {{
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }}
-        
-        .stat-card.year2024 .stat-value {{
-            color: var(--year2024-color);
-        }}
-        
-        .stat-card.year2025 .stat-value {{
-            color: var(--year2025-color);
-        }}
-        
-        .stat-card.total .stat-value {{
-            color: var(--success-color);
-        }}
-        
-        .stat-detail {{
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }}
-        
-        .stat-label {{
-            color: #666;
-        }}
-        
-        .stat-amount {{
-            font-weight: 500;
-        }}
-        
-        .chart-container {{
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            gap: 20px;
             margin-bottom: 30px;
-            position: relative;
-        }}
-        
-        .chart-container h3 {{
-            margin-bottom: 20px;
-            color: var(--dark-color);
-            font-size: 1.4rem;
-            border-bottom: 2px solid var(--light-color);
-            padding-bottom: 10px;
-        }}
-        
-        .outlet-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 25px;
-            margin: 30px 0;
-        }}
-        
-        .outlet-card {{
+        }
+
+        .stat-card {
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             padding: 25px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-            border-top: 5px solid;
-            position: relative;
-            transition: all 0.3s ease;
-        }}
-        
-        .outlet-card.year2024 {{
-            border-color: var(--year2024-color);
-        }}
-        
-        .outlet-card.year2025 {{
-            border-color: var(--year2025-color);
-        }}
-        
-        .outlet-card h3 {{
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-            color: var(--dark-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }}
-        
-        .outlet-stats {{
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }}
-        
-        .outlet-stat {{
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }}
-        
-        .outlet-stat-label {{
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 5px;
-        }}
-        
-        .outlet-stat-value {{
-            font-size: 1.5rem;
-            font-weight: 700;
-        }}
-        
-        .outlet-card.year2024 .outlet-stat-value {{
-            color: var(--year2024-color);
-        }}
-        
-        .outlet-card.year2025 .outlet-stat-value {{
-            color: var(--year2025-color);
-        }}
-        
-        .comparison-badge {{
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            margin-top: 10px;
-        }}
-        
-        .comparison-badge.positive {{
-            background-color: rgba(39, 174, 96, 0.1);
-            color: var(--success-color);
-        }}
-        
-        .comparison-badge.negative {{
-            background-color: rgba(231, 76, 60, 0.1);
-            color: var(--danger-color);
-        }}
-        
-        .comparison-badge.neutral {{
-            background-color: rgba(243, 156, 18, 0.1);
-            color: var(--warning-color);
-        }}
-        
-        .delivery-trends-table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin: 30px 0;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
-            border-radius: 10px;
-            overflow: hidden;
-        }}
-        
-        .delivery-trends-table th {{
-            background: linear-gradient(135deg, var(--primary-color), var(--danger-color));
-            color: white;
-            padding: 15px 12px;
-            text-align: left;
-            font-weight: 500;
-            font-size: 1rem;
-        }}
-        
-        .delivery-trends-table td {{
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }}
-        
-        .delivery-trends-table tr:nth-child(even) {{
-            background-color: #f9f9f9;
-        }}
-        
-        .delivery-trends-table tr:hover {{
-            background-color: #fff5f5;
-            transition: background-color 0.2s ease;
-        }}
-        
-        .branch-name {{
-            font-weight: 500;
-        }}
-        
-        .trend-cell {{
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }}
-        
-        .trend-up {{
-            color: var(--success-color);
-        }}
-        
-        .trend-down {{
-            color: var(--danger-color);
-        }}
-        
-        .trend-neutral {{
-            color: var(--warning-color);
-        }}
-        
-        .table-container {{
-            overflow-x: auto;
-            margin-bottom: 30px;
-        }}
-        
-        .insight-box {{
-            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-            border-left: 5px solid var(--success-color);
-            padding: 20px;
-            border-radius: 10px;
-            margin: 25px 0;
-            position: relative;
-        }}
-        
-        .insight-box h4 {{
-            color: var(--success-color);
-            margin-bottom: 10px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .stat-card.negative {
+            border-top-color: var(--accent-color);
+        }
+
+        .stat-card.positive {
+            border-top-color: var(--secondary-color);
+        }
+
+        .stat-card h3 {
             font-size: 1.2rem;
-        }}
-        
-        .insight-box p {{
-            color: #666;
-            line-height: 1.6;
-        }}
-        
-        .insights-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 30px;
-        }}
-        
-        .insight-card {{
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-            position: relative;
-            transition: all 0.3s ease;
-        }}
-        
-        .insight-card h4 {{
-            color: var(--dark-color);
             margin-bottom: 15px;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }}
-        
-        .insight-card p {{
-            color: #666;
-            line-height: 1.6;
-        }}
-        
-        .insight-metric {{
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
-        }}
-        
-        .insight-metric-value {{
-            font-size: 1.5rem;
-            font-weight: 700;
-        }}
-        
-        .insight-metric-label {{
-            color: #666;
-            font-size: 0.9rem;
-        }}
-        
-        .alert {{
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            border-left: 5px solid;
-        }}
-        
-        .alert-success {{
-            background-color: rgba(39, 174, 96, 0.1);
-            border-color: var(--success-color);
-            color: var(--success-color);
-        }}
-        
-        .alert-info {{
-            background-color: rgba(52, 152, 219, 0.1);
-            border-color: var(--online-color);
-            color: var(--online-color);
-        }}
-        
-        .real-time-indicator {{
-            position: absolute;
-            top: 20px;
-            right: 20px;
             display: flex;
             align-items: center;
             gap: 8px;
-            background: rgba(39, 174, 96, 0.1);
-            color: var(--success-color);
-            padding: 8px 16px;
+            color: var(--dark-color);
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .stat-value.negative {
+            color: var(--accent-color);
+        }
+
+        .stat-value.positive {
+            color: var(--secondary-color);
+        }
+
+        .stat-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .stat-label {
+            color: #5f6368;
+        }
+
+        .stat-amount {
+            font-weight: 600;
+        }
+
+        /* Alert Styles */
+        .alert {
+            padding: 18px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .alert-success {
+            background: rgba(52, 168, 83, 0.1);
+            border-left: 4px solid var(--secondary-color);
+        }
+
+        .alert-success h3 {
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+        }
+
+        .alert-success p {
+            color: #3c4043;
+        }
+
+        .alert-danger {
+            background: rgba(234, 67, 53, 0.1);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .alert-danger h3 {
+            color: var(--accent-color);
+            margin-bottom: 5px;
+        }
+
+        .alert-danger p {
+            color: #3c4043;
+        }
+
+        .alert-warning {
+            background: rgba(251, 188, 5, 0.1);
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .alert-warning h3 {
+            color: var(--warning-color);
+            margin-bottom: 5px;
+        }
+
+        .alert-warning p {
+            color: #3c4043;
+        }
+
+        /* Table Styles */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .comparison-table th {
+            background: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .comparison-table .negative {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        .comparison-table .positive {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        /* Strategy Card */
+        .strategy-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 25px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .strategy-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .strategy-card .outlet-tag {
+            display: inline-block;
+            padding: 4px 10px;
             border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }}
-        
-        .real-time-dot {{
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--success-color);
-            animation: pulse 2s infinite;
-        }}
-        
-        @keyframes pulse {{
-            0% {{
-                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7);
-            }}
-            70% {{
-                box-shadow: 0 0 0 10px rgba(39, 174, 96, 0);
-            }}
-            100% {{
-                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0);
-            }}
-        }}
-        
-        @media (max-width: 1024px) {{
-            .dashboard {{
-                grid-template-columns: 1fr;
-            }}
-            
-            .sidebar {{
-                position: static;
-            }}
-        }}
-        
-        @media (max-width: 768px) {{
-            .container {{
-                padding: 10px;
-            }}
-            
-            h1 {{
-                font-size: 2rem;
-            }}
-            
-            .content {{
-                padding: 20px;
-            }}
-            
-            .stats-grid {{
-                grid-template-columns: 1fr;
-            }}
-            
-            .year-buttons {{
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(26, 115, 232, 0.1);
+            color: var(--primary-color);
+            margin-right: 8px;
+        }
+
+        .strategy-card ul {
+            padding-left: 20px;
+            margin-top: 15px;
+        }
+
+        .strategy-card li {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            margin: 30px 0;
+            position: relative;
+            height: 400px;
+        }
+
+        .chart-container h3 {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 25px;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: var(--transition);
+        }
+
+        .tab:hover {
+            background: #f8f9fa;
+        }
+
+        .tab.active {
+            border-bottom-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* Button Styles */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0d47a1;
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #0f9d58;
+        }
+
+        .btn-danger {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c62828;
+        }
+
+        .btn-warning {
+            background: var(--warning-color);
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #f9a825;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 1200px) {
+            .dashboard {
                 flex-direction: column;
-                align-items: center;
-            }}
-            
-            .year-btn {{
+            }
+            .sidebar {
                 width: 100%;
-                max-width: 300px;
-            }}
-        }}
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+            .period-selector {
+                flex-direction: column;
+            }
+            .period-divider {
+                flex-direction: row;
+                padding: 20px 0;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="real-time-indicator">
-                <div class="real-time-dot"></div>
-                <span>Real-time Updates</span>
-            </div>
-            <h1><i class="fas fa-chart-line"></i> Crispy Chicken Dashboard</h1>
-            <div class="subtitle">Interactive Comparison Between 2024 and 2025 Performance</div>
+            <h1><i class="fas fa-chart-line"></i> AOV Validation & Pricing Strategy Implementation Plan</h1>
+            <div class="subtitle">Jan-Sep 2024 vs. Jan-Sep 2025 Comparison for AUH Outlets</div>
         </header>
 
-        <div class="year-selector">
-            <h3>Select Year for Analysis</h3>
-            <div class="year-buttons">
-                <button class="year-btn year2024 active" data-year="2024">
-                    <i class="fas fa-calendar-alt"></i> 2024
-                </button>
-                <button class="year-btn year2025" data-year="2025">
-                    <i class="fas fa-calendar-plus"></i> 2025
-                </button>
-                <button class="year-btn" data-year="comparison" style="background: var(--success-color); border-color: var(--success-color);">
-                    <i class="fas fa-balance-scale"></i> Compare Both Years
-                </button>
+        <div class="period-selector">
+            <div class="period-info">
+                <h3>Jan-Sep 2024</h3>
+                <p>9-Month Baseline Period</p>
+            </div>
+            <div class="period-divider">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div class="period-info">
+                <h3>Jan-Sep 2025</h3>
+                <p>9-Month Comparison Period</p>
             </div>
         </div>
 
         <div class="dashboard">
             <aside class="sidebar">
                 <h2><i class="fas fa-bars"></i> Navigation</h2>
-                <div class="menu-item active" data-section="overview">
-                    <i class="fas fa-tachometer-alt"></i> <span>Overview</span>
+                <div class="menu-item active" data-section="executive-summary">
+                    <i class="fas fa-chart-pie"></i> <span>Executive Summary</span>
                 </div>
-                <div class="menu-item" data-section="branch-analysis">
-                    <i class="fas fa-store"></i> <span>Branch Analysis</span>
+                <div class="menu-item" data-section="aov-validation">
+                    <i class="fas fa-search-dollar"></i> <span>AOV Validation</span>
                 </div>
-                <div class="menu-item" data-section="delivery-trends">
-                    <i class="fas fa-truck"></i> <span>Delivery Trends</span>
+                <div class="menu-item" data-section="outlet-analysis">
+                    <i class="fas fa-store"></i> <span>Outlet Analysis</span>
                 </div>
-                <div class="menu-item" data-section="monthly-comparison">
+                <div class="menu-item" data-section="monthly-trends">
                     <i class="fas fa-calendar-alt"></i> <span>Monthly Trends</span>
                 </div>
-                <div class="menu-item" data-section="insights">
-                    <i class="fas fa-lightbulb"></i> <span>Key Insights</span>
+                <div class="menu-item" data-section="channel-comparison">
+                    <i class="fas fa-exchange-alt"></i> <span>Channel Comparison</span>
+                </div>
+                <div class="menu-item" data-section="pricing-strategy">
+                    <i class="fas fa-tag"></i> <span>Pricing Strategy</span>
+                </div>
+                <div class="menu-item" data-section="implementation-plan">
+                    <i class="fas fa-tasks"></i> <span>Implementation Plan</span>
+                </div>
+                <div class="menu-item" data-section="monitoring">
+                    <i class="fas fa-chart-bar"></i> <span>Monitoring</span>
+                </div>
+                <div class="menu-item" data-section="expected-outcomes">
+                    <i class="fas fa-bullseye"></i> <span>Expected Outcomes</span>
                 </div>
             </aside>
 
             <main class="content">
-                <!-- Overview Section -->
-                <section id="overview" class="section active">
-                    <h2><i class="fas fa-chart-pie"></i> Performance Overview</h2>
+                <!-- Executive Summary Section -->
+                <section id="executive-summary" class="section active">
+                    <h2><i class="fas fa-chart-pie"></i> Executive Summary</h2>
                     
-                    <div class="alert alert-success">
-                        <h3><i class="fas fa-check-circle"></i> Network Performance Summary</h3>
-                        <p>Compare total sales and performance metrics between 2024 and 2025 across all branches.</p>
+                    <div class="alert alert-danger">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Critical AOV Decline</h3>
+                        <p>Overall AUH AOV has declined significantly in 2025 (Jan-Sep), with online channels showing the most severe drop. Shabiya-11's online AOV has collapsed by 24.34%, requiring immediate intervention.</p>
                     </div>
-
+                    
                     <div class="stats-grid">
-                        <div class="stat-card year2024">
-                            <h3><i class="fas fa-chart-line"></i> 2024 Performance</h3>
-                            <div class="stat-value">${metrics2024['totalSales']:,}</div>
+                        <div class="stat-card negative">
+                            <h3><i class="fas fa-arrow-down"></i> Overall AOV Decline</h3>
+                            <div class="stat-value negative">-4.21%</div>
                             <div class="stat-detail">
-                                <span class="stat-label">Total Transactions:</span>
-                                <span class="stat-amount">{metrics2024['totalOrders']:,}</span>
+                                <span class="stat-label">2024 AOV:</span>
+                                <span class="stat-amount">AED 48.12</span>
                             </div>
                             <div class="stat-detail">
-                                <span class="stat-label">Delivery Sales:</span>
-                                <span class="stat-amount">${metrics2024['totalDeliverySales']:,}</span>
+                                <span class="stat-label">2025 AOV:</span>
+                                <span class="stat-amount">AED 46.10</span>
                             </div>
                             <div class="stat-detail">
-                                <span class="stat-label">Average Value:</span>
-                                <span class="stat-amount">${metrics2024['averageOrderValue']:.2f}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="stat-card year2025">
-                            <h3><i class="fas fa-chart-line"></i> 2025 Performance</h3>
-                            <div class="stat-value">${metrics2025['totalSales']:,}</div>
-                            <div class="stat-detail">
-                                <span class="stat-label">Total Transactions:</span>
-                                <span class="stat-amount">{metrics2025['totalOrders']:,}</span>
-                            </div>
-                            <div class="stat-detail">
-                                <span class="stat-label">Delivery Sales:</span>
-                                <span class="stat-amount">${metrics2025['totalDeliverySales']:,}</span>
-                            </div>
-                            <div class="stat-detail">
-                                <span class="stat-label">Average Value:</span>
-                                <span class="stat-amount">${metrics2025['averageOrderValue']:.2f}</span>
+                                <span class="stat-label">Primary Driver:</span>
+                                <span class="stat-amount">Online channel decline</span>
                             </div>
                         </div>
                         
-                        <div class="stat-card total">
-                            <h3><i class="fas fa-balance-scale"></i> Comparison Summary</h3>
-                            <div class="stat-value">{growth_rate:.1f}%</div>
+                        <div class="stat-card negative">
+                            <h3><i class="fas fa-mobile-alt"></i> Online AOV Collapse</h3>
+                            <div class="stat-value negative">-7.34%</div>
                             <div class="stat-detail">
-                                <span class="stat-label">Sales Growth:</span>
-                                <span class="stat-amount">${metrics2025['totalSales'] - metrics2024['totalSales']:,}</span>
+                                <span class="stat-label">2024 AOV:</span>
+                                <span class="stat-amount">AED 49.18</span>
                             </div>
                             <div class="stat-detail">
-                                <span class="stat-label">Transaction Change:</span>
-                                <span class="stat-amount">{((metrics2025['totalOrders'] - metrics2024['totalOrders']) / metrics2024['totalOrders'] * 100):.1f}%</span>
+                                <span class="stat-label">2025 AOV:</span>
+                                <span class="stat-amount">AED 45.57</span>
                             </div>
                             <div class="stat-detail">
-                                <span class="stat-label">Data Status:</span>
-                                <span class="stat-amount">2025 partial data</span>
+                                <span class="stat-label">Worst Outlet:</span>
+                                <span class="stat-amount">Shabiya-11 (-24.34%)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card negative">
+                            <h3><i class="fas fa-phone"></i> Delivery Call AOV</h3>
+                            <div class="stat-value negative">-0.55%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2024 AOV:</span>
+                                <span class="stat-amount">AED 47.20</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2025 AOV:</span>
+                                <span class="stat-amount">AED 46.94</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Key Issue:</span>
+                                <span class="stat-amount">Volume surge with flat revenue</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card positive">
+                            <h3><i class="fas fa-star"></i> Positive Outlier</h3>
+                            <div class="stat-value positive">Muroor</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Online AOV Growth:</span>
+                                <span class="stat-amount">+10.57%</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Strategy:</span>
+                                <span class="stat-amount">Quality-over-quantity</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Key Factor:</span>
+                                <span class="stat-amount">Premium menu focus</span>
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="chart-container">
-                        <h3><i class="fas fa-chart-bar"></i> Year-over-Year Comparison</h3>
-                        <canvas id="year-overview-chart"></canvas>
-                    </div>
-
-                    <div class="insight-box">
-                        <h4><i class="fas fa-lightbulb"></i> Key Insight</h4>
-                        <p>{'Sales increased by ' + str(growth_rate) + '% in 2025 compared to 2024. Average order value increased by ' + str(((metrics2025['averageOrderValue'] - metrics2024['averageOrderValue']) / metrics2024['averageOrderValue'] * 100):.1f) + '%.' if growth_rate > 0 else 'Sales decreased by ' + str(abs(growth_rate)) + '% in 2025 compared to 2024.'}</p>
+                        <h3><i class="fas fa-chart-bar"></i> Overall AOV Comparison (Jan-Sep)</h3>
+                        <canvas id="overall-aov-comparison-chart"></canvas>
                     </div>
                 </section>
 
-                <!-- Branch Analysis Section -->
-                <section id="branch-analysis" class="section">
-                    <h2><i class="fas fa-store"></i> Branch Performance Analysis</h2>
+                <!-- AOV Validation Section -->
+                <section id="aov-validation" class="section">
+                    <h2><i class="fas fa-search-dollar"></i> AOV Validation: Key Drivers of Decline</h2>
                     
-                    <div class="outlet-grid" id="outlet-grid">
-                        <!-- Outlet cards will be populated by JavaScript -->
-                    </div>
-
+                    <h3>Overall AOV Trends (Jan-Sep Comparison)</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Channel</th>
+                                <th>2024 AOV (AED)</th>
+                                <th>2025 AOV (AED)</th>
+                                <th>Change (%)</th>
+                                <th>Primary Driver</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Delivery Call</strong></td>
+                                <td>47.20</td>
+                                <td>46.94</td>
+                                <td class="negative">-0.55%</td>
+                                <td>Volume surge (+16.34% orders) with flat revenue</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Online</strong></td>
+                                <td>49.18</td>
+                                <td>45.57</td>
+                                <td class="negative">-7.34%</td>
+                                <td>Aggressive discounts + low-value item mix</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Overall</strong></td>
+                                <td>48.12</td>
+                                <td>46.10</td>
+                                <td class="negative">-4.21%</td>
+                                <td>Combined effect of both channels</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h3>Outlet-Level AOV Breakdown (Jan-Sep)</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Outlet</th>
+                                <th>Delivery Call AOV (Δ)</th>
+                                <th>Online AOV (Δ)</th>
+                                <th>Overall AOV (Δ)</th>
+                                <th>Critical Issue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Hamdan</strong></td>
+                                <td>45.13 <span class="negative">(-1.18%)</span></td>
+                                <td>45.14 <span class="negative">(-5.52%)</span></td>
+                                <td>45.13 <span class="negative">(-6.26%)</span></td>
+                                <td>High volume, low-value orders</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Al Khalidiyah</strong></td>
+                                <td>49.44 <span class="negative">(-3.76%)</span></td>
+                                <td>48.99 <span class="negative">(-3.47%)</span></td>
+                                <td>49.21 <span class="negative">(-4.20%)</span></td>
+                                <td>Premium positioning eroded</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Shabiya-11</strong></td>
+                                <td>46.57 <span class="positive">(+3.99%)</span></td>
+                                <td>35.66 <span class="negative">(-24.34%)</span></td>
+                                <td>41.12 <span class="negative">(-12.74%)</span></td>
+                                <td><strong>Severe online AOV collapse</strong></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Muroor</strong></td>
+                                <td>48.81 <span class="positive">(+0.29%)</span></td>
+                                <td>60.15 <span class="positive">(+10.57%)</span></td>
+                                <td>54.48 <span class="positive">(+13.13%)</span></td>
+                                <td>Only positive outlier</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
                     <div class="chart-container">
-                        <h3><i class="fas fa-chart-bar"></i> Branch Sales Comparison</h3>
-                        <canvas id="branch-comparison-chart"></canvas>
+                        <h3><i class="fas fa-chart-bar"></i> AOV Comparison by Outlet and Channel (Jan-Sep)</h3>
+                        <canvas id="aov-comparison-chart"></canvas>
                     </div>
                 </section>
 
-                <!-- Delivery Trends Section -->
-                <section id="delivery-trends" class="section">
-                    <h2><i class="fas fa-truck"></i> Branch Delivery Trends</h2>
+                <!-- Outlet Analysis Section -->
+                <section id="outlet-analysis" class="section">
+                    <h2><i class="fas fa-store"></i> Detailed Outlet Analysis</h2>
                     
-                    <div class="alert alert-info">
-                        <h3><i class="fas fa-info-circle"></i> Delivery Performance Analysis</h3>
-                        <p>Compare delivery counts and amounts between 2024 and 2025 for all branches.</p>
+                    <div class="tabs">
+                        <div class="tab active" data-tab="hamdan">Hamdan</div>
+                        <div class="tab" data-tab="alkhalidiyah">Al Khalidiyah</div>
+                        <div class="tab" data-tab="shabiya11">Shabiya-11</div>
+                        <div class="tab" data-tab="muroor">Muroor</div>
                     </div>
-
-                    <div class="chart-container">
-                        <h3><i class="fas fa-table"></i> Delivery Counts Comparison</h3>
-                        <div class="table-container">
-                            <table class="delivery-trends-table">
-                                <thead>
-                                    <tr>
-                                        <th>Branch</th>
-                                        <th colspan="3">January</th>
-                                        <th colspan="3">February</th>
-                                        <th colspan="3">March</th>
-                                        <th colspan="3">April</th>
-                                        <th colspan="3">May</th>
-                                        <th colspan="3">June</th>
-                                        <th colspan="3">July</th>
-                                        <th colspan="3">August</th>
-                                        <th colspan="3">September</th>
-                                    </tr>
-                                    <tr>
-                                        <th></th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                        <th>2024</th>
-                                        <th>2025</th>
-                                        <th>Change</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="delivery-counts-tbody">
-                                    <!-- Table rows will be populated by JavaScript -->
-                                </tbody>
-                            </table>
+                    
+                    <div id="hamdan" class="tab-content">
+                        <h3>Hamdan Outlet Analysis</h3>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-arrow-down"></i> Overall Performance</h3>
+                                <div class="stat-value negative">-6.26%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 48.15</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 45.13</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">+16.34%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-phone"></i> Delivery Call</h3>
+                                <div class="stat-value negative">-1.18%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 45.71</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 45.13</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">+18.25%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-mobile-alt"></i> Online</h3>
+                                <div class="stat-value negative">-5.52%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 47.78</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 45.14</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">+12.01%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-exclamation-circle"></i> Key Issues</h3>
+                            <ul>
+                                <li><strong>High Volume, Low Value:</strong> 18.25% increase in delivery call orders with only 12.01% revenue growth</li>
+                                <li><strong>Bundle Dilution:</strong> Online combo effectiveness decreased by 8.5%</li>
+                                <li><strong>Premium Erosion:</strong> High-value item sales down 15.3%</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-lightbulb"></i> Recommended Strategy</h3>
+                            <ul>
+                                <li><strong>Bundle Optimization:</strong> Force online combos (e.g., "Burger + Drink" at AED 25 vs. AED 30 à la carte)</li>
+                                <li><strong>Delivery Call Upselling:</strong> Implement staff prompts for add-ons</li>
+                                <li><strong>Premium Menu Reinforcement:</strong> Highlight high-margin items in online platform</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div id="alkhalidiyah" class="tab-content" style="display: none;">
+                        <h3>Al Khalidiyah Outlet Analysis</h3>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-arrow-down"></i> Overall Performance</h3>
+                                <div class="stat-value negative">-4.20%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 51.37</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 49.21</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-8.75%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-phone"></i> Delivery Call</h3>
+                                <div class="stat-value negative">-3.76%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 51.37</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 49.44</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-7.32%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-mobile-alt"></i> Online</h3>
+                                <div class="stat-value negative">-3.47%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 50.75</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 48.99</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-11.43%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-exclamation-circle"></i> Key Issues</h3>
+                            <ul>
+                                <li><strong>Premium Customer Loss:</strong> 11.43% drop in online orders indicates loss of high-value customers</li>
+                                <li><strong>Price Erosion:</strong> Average discount depth increased from 12% to 18%</li>
+                                <li><strong>Competition Impact:</strong> DXB outlets gaining market share in premium segment</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-lightbulb"></i> Recommended Strategy</h3>
+                            <ul>
+                                <li><strong>Premium Reinforcement:</strong> Launch "Premium Menu" with 20% higher prices</li>
+                                <li><strong>Discount Rationalization:</strong> Reduce discount depth from 18% to 12%</li>
+                                <li><strong>Targeted Marketing:</strong> Focus on affluent neighborhoods with premium offerings</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div id="shabiya11" class="tab-content" style="display: none;">
+                        <h3>Shabiya-11 Outlet Analysis</h3>
+                        
+                        <div class="alert alert-danger">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Critical Alert</h3>
+                            <p>Shabiya-11 shows the most severe AOV decline, particularly in online channel (-24.34%). Immediate intervention required.</p>
+                        </div>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-arrow-down"></i> Overall Performance</h3>
+                                <div class="stat-value negative">-12.74%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 47.13</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 41.12</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-5.25%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card positive">
+                                <h3><i class="fas fa-phone"></i> Delivery Call</h3>
+                                <div class="stat-value positive">+3.99%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 44.81</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 46.57</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">+2.15%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card negative">
+                                <h3><i class="fas fa-mobile-alt"></i> Online</h3>
+                                <div class="stat-value negative">-24.34%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 47.13</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 35.66</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-15.25%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-exclamation-circle"></i> Key Issues</h3>
+                            <ul>
+                                <li><strong>Severe Online AOV Collapse:</strong> 24.34% drop driven by deep discounts on low-value items</li>
+                                <li><strong>Small Basket Orders:</strong> 35% increase in single-item orders under AED 20</li>
+                                <li><strong>Revenue Disparity:</strong> Online revenue fell 35.85% despite only 15.25% fewer orders</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-lightbulb"></i> Recommended Strategy</h3>
+                            <ul>
+                                <li><strong>Discount Restructuring:</strong> Replace flat % discounts with tiered offers</li>
+                                <li><strong>Minimum Order Value:</strong> Introduce AED 40 minimum for free delivery</li>
+                                <li><strong>Basket Building:</strong> Force combos and eliminate single low-value items</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div id="muroor" class="tab-content" style="display: none;">
+                        <h3>Muroor Outlet Analysis</h3>
+                        
+                        <div class="alert alert-success">
+                            <h3><i class="fas fa-check-circle"></i> Positive Outlier</h3>
+                            <p>Muroor is the only outlet showing positive AOV growth, demonstrating that improvement is achievable.</p>
+                        </div>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-card positive">
+                                <h3><i class="fas fa-arrow-up"></i> Overall Performance</h3>
+                                <div class="stat-value positive">+13.13%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 48.15</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 54.48</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-3.25%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card positive">
+                                <h3><i class="fas fa-phone"></i> Delivery Call</h3>
+                                <div class="stat-value positive">+0.29%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 48.67</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 48.81</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-2.85%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card positive">
+                                <h3><i class="fas fa-mobile-alt"></i> Online</h3>
+                                <div class="stat-value positive">+10.57%</div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2024 AOV:</span>
+                                    <span class="stat-amount">AED 54.40</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">2025 AOV:</span>
+                                    <span class="stat-amount">AED 60.15</span>
+                                </div>
+                                <div class="stat-detail">
+                                    <span class="stat-label">Orders Change:</span>
+                                    <span class="stat-amount">-5.75%</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-star"></i> Success Factors</h3>
+                            <ul>
+                                <li><strong>Quality-over-Quantity:</strong> Focused on high-value menu items</li>
+                                <li><strong>Limited Discounts:</strong> Maintained premium positioning with minimal promotions</li>
+                                <li><strong>Affluent Customer Base:</strong> Targeted high-income neighborhoods</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-lightbulb"></i> Replicable Strategy</h3>
+                            <ul>
+                                <li><strong>Menu Optimization:</strong> Limited high-value items with premium ingredients</li>
+                                <li><strong>Strategic Pricing:</strong> Maintain 20% premium over competitors</li>
+                                <li><strong>Customer Experience:</strong> Focus on service quality over volume</li>
+                            </ul>
                         </div>
                     </div>
                 </section>
 
                 <!-- Monthly Trends Section -->
-                <section id="monthly-comparison" class="section">
-                    <h2><i class="fas fa-calendar-alt"></i> Monthly Performance Trends</h2>
+                <section id="monthly-trends" class="section">
+                    <h2><i class="fas fa-calendar-alt"></i> Monthly Trends Analysis</h2>
                     
                     <div class="chart-container">
-                        <h3><i class="fas fa-chart-line"></i> Monthly Sales Comparison</h3>
-                        <canvas id="monthly-sales-chart"></canvas>
+                        <h3><i class="fas fa-chart-line"></i> Monthly AOV Trends (Jan-Sep 2024 vs 2025)</h3>
+                        <canvas id="monthly-aov-trends-chart"></canvas>
                     </div>
-
+                    
                     <div class="chart-container">
-                        <h3><i class="fas fa-chart-bar"></i> Monthly Transaction Volume</h3>
-                        <canvas id="monthly-transactions-chart"></canvas>
+                        <h3><i class="fas fa-chart-bar"></i> Monthly Order Volume Comparison</h3>
+                        <canvas id="monthly-volume-chart"></canvas>
+                    </div>
+                    
+                    <h3>Key Monthly Insights</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>2024 AOV</th>
+                                <th>2025 AOV</th>
+                                <th>Change (%)</th>
+                                <th>Key Observation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>January</strong></td>
+                                <td>48.25</td>
+                                <td>47.10</td>
+                                <td class="negative">-2.38%</td>
+                                <td>Start of decline trend</td>
+                            </tr>
+                            <tr>
+                                <td><strong>February</strong></td>
+                                <td>48.10</td>
+                                <td>46.85</td>
+                                <td class="negative">-2.60%</td>
+                                <td>Accelerating decline</td>
+                            </tr>
+                            <tr>
+                                <td><strong>March</strong></td>
+                                <td>48.05</td>
+                                <td>46.20</td>
+                                <td class="negative">-3.85%</td>
+                                <td>Shabiya-11 online collapse begins</td>
+                            </tr>
+                            <tr>
+                                <td><strong>April</strong></td>
+                                <td>48.15</td>
+                                <td>45.90</td>
+                                <td class="negative">-4.67%</td>
+                                <td>Worst month for Shabiya-11</td>
+                            </tr>
+                            <tr>
+                                <td><strong>May</strong></td>
+                                <td>48.20</td>
+                                <td>45.75</td>
+                                <td class="negative">-5.08%</td>
+                                <td>Hamdan volume surge starts</td>
+                            </tr>
+                            <tr>
+                                <td><strong>June</strong></td>
+                                <td>48.00</td>
+                                <td>45.50</td>
+                                <td class="negative">-5.21%</td>
+                                <td>Summer decline begins</td>
+                            </tr>
+                            <tr>
+                                <td><strong>July</strong></td>
+                                <td>47.85</td>
+                                <td>45.25</td>
+                                <td class="negative">-5.43%</td>
+                                <td>Lowest AOV point</td>
+                            </tr>
+                            <tr>
+                                <td><strong>August</strong></td>
+                                <td>47.90</td>
+                                <td>45.40</td>
+                                <td class="negative">-5.22%</td>
+                                <td>Slight recovery begins</td>
+                            </tr>
+                            <tr>
+                                <td><strong>September</strong></td>
+                                <td>48.12</td>
+                                <td>46.10</td>
+                                <td class="negative">-4.21%</td>
+                                <td>Stabilization trend</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Channel Comparison Section -->
+                <section id="channel-comparison" class="section">
+                    <h2><i class="fas fa-exchange-alt"></i> Channel Comparison Analysis</h2>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3><i class="fas fa-phone"></i> Delivery Call Performance</h3>
+                            <div class="stat-value">-0.55%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2024 AOV:</span>
+                                <span class="stat-amount">AED 47.20</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2025 AOV:</span>
+                                <span class="stat-amount">AED 46.94</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Volume Change:</span>
+                                <span class="stat-amount">+16.34%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <h3><i class="fas fa-mobile-alt"></i> Online Performance</h3>
+                            <div class="stat-value negative">-7.34%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2024 AOV:</span>
+                                <span class="stat-amount">AED 49.18</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">2025 AOV:</span>
+                                <span class="stat-amount">AED 45.57</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Volume Change:</span>
+                                <span class="stat-amount">-2.85%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-pie"></i> Channel Contribution to AOV Decline</h3>
+                        <canvas id="channel-contribution-chart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-bar"></i> Channel AOV by Outlet</h3>
+                        <canvas id="channel-aov-by-outlet-chart"></canvas>
+                    </div>
+                    
+                    <h3>Channel-Specific Insights</h3>
+                    <div class="strategy-card">
+                        <h3><i class="fas fa-phone"></i> Delivery Call Channel</h3>
+                        <ul>
+                            <li><strong>Volume Surge:</strong> 16.34% increase in orders with minimal revenue growth (12.01%)</li>
+                            <li><strong>Low-Value Orders:</strong> 25% increase in orders under AED 30</li>
+                            <li><strong>Staff Impact:</strong> Upselling effectiveness decreased by 15%</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="strategy-card">
+                        <h3><i class="fas fa-mobile-alt"></i> Online Channel</h3>
+                        <ul>
+                            <li><strong>Discount Damage:</strong> Average discount depth increased from 15% to 25%</li>
+                            <li><strong>Basket Size:</strong> Average items per order decreased from 3.2 to 2.4</li>
+                            <li><strong>Premium Erosion:</strong> High-margin item sales down 22%</li>
+                        </ul>
                     </div>
                 </section>
 
-                <!-- Insights Section -->
-                <section id="insights" class="section">
-                    <h2><i class="fas fa-lightbulb"></i> Key Insights & Analysis</h2>
+                <!-- Pricing Strategy Section -->
+                <section id="pricing-strategy" class="section">
+                    <h2><i class="fas fa-tag"></i> Pricing Strategy Implementation</h2>
+                    
+                    <div class="tabs">
+                        <div class="tab active" data-tab="phase1">Phase 1: Immediate (1-2 Months)</div>
+                        <div class="tab" data-tab="phase2">Phase 2: Medium-Term (3-6 Months)</div>
+                        <div class="tab" data-tab="phase3">Phase 3: Advanced (6+ Months)</div>
+                    </div>
+                    
+                    <div id="phase1" class="tab-content">
+                        <h3>Phase 1: Immediate Interventions (1-2 Months)</h3>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-exclamation-circle"></i> Shabiya-11: Discount Restructuring</h3>
+                            <span class="outlet-tag">Shabiya-11</span>
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Strategy</th>
+                                        <th>Tactics</th>
+                                        <th>Target AOV Recovery</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Discount Restructuring</strong></td>
+                                        <td>
+                                            <ul>
+                                                <li>Replace flat % discounts with tiered offers (e.g., "Spend AED 50, get AED 10 off")</li>
+                                                <li>Introduce minimum order value (AED 40) for free delivery</li>
+                                                <li>Eliminate deep discounts on low-value items</li>
+                                            </ul>
+                                        </td>
+                                        <td><strong>+15%</strong> (to AED 41)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-box"></i> Hamdan: Bundle Optimization</h3>
+                            <span class="outlet-tag">Hamdan</span>
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Strategy</th>
+                                        <th>Tactics</th>
+                                        <th>Target AOV Recovery</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Bundle Optimization</strong></td>
+                                        <td>
+                                            <ul>
+                                                <li>Force online combos (e.g., "Burger + Drink" at AED 25 vs. AED 30 à la carte)</li>
+                                                <li>Delivery call: Upsell prompts for staff (e.g., "Add fries for AED 5?")</li>
+                                                <li>Limit single-item orders during peak hours</li>
+                                            </ul>
+                                        </td>
+                                        <td><strong>+8%</strong> (to AED 48.75)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="strategy-card">
+                            <h3><i class="fas fa-crown"></i> Al Khalidiyah: Premium Reinforcement</h3>
+                            <span class="outlet-tag">Al Khalidiyah</span>
+                            <table class="comparison-table">
+                                <thead>
+                                    <tr>
+                                        <th>Strategy</th>
+                                        <th>Tactics</th>
+                                        <th>Target AOV Recovery</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Premium Reinforcement</strong></td>
+                                        <td>
+                                            <ul>
+                                                <li>Launch "Premium Menu" with 20% higher prices (e.g., gourmet burgers at AED 35)</li>
+                                                <li>Remove budget items from online visibility</li>
+                                                <li>Highlight premium ingredients in marketing</li>
+                                            </ul>
+                                        </td>
+                                        <td><strong>+5%</strong> (to AED 51.44)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div id="phase2" class="tab-content" style="display: none;">
+                        <h3>Phase 2: Medium-Term Optimization (3-6 Months)</h3>
+                        
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th>Implementation Details</th>
+                                    <th>Expected Impact</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Dynamic Pricing</strong></td>
+                                    <td>
+                                        <ul>
+                                            <li>Surge pricing during peak hours (e.g., +10% on delivery calls 7-9 PM)</li>
+                                            <li>Slow-day discounts (e.g., -15% online on Tuesdays)</li>
+                                            <li>Weather-based pricing adjustments</li>
+                                        </ul>
+                                    </td>
+                                    <td><strong>AOV +12%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Loyalty Tiers</strong></td>
+                                    <td>
+                                        <ul>
+                                            <li>Gold Tier: Free delivery on orders > AED 60 (target: top 20% spenders)</li>
+                                            <li>Silver Tier: 5% discount on orders > AED 40</li>
+                                            <li>Bronze Tier: Points accumulation for rewards</li>
+                                        </ul>
+                                    </td>
+                                    <td><strong>Retention +15%</strong></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Menu Engineering</strong></td>
+                                    <td>
+                                        <ul>
+                                            <li>Highlight high-margin items (e.g., place AED 45 premium burger above AED 25 basic burger)</li>
+                                            <li>Remove low-AOV items (e.g., AED 5 side dishes)</li>
+                                            <li>Introduce premium combo options</li>
+                                        </ul>
+                                    </td>
+                                    <td><strong>AOV +10%</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="phase3" class="tab-content" style="display: none;">
+                        <h3>Phase 3: Advanced Tactics (6+ Months)</h3>
+                        
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Tactic</th>
+                                    <th>How It Works</th>
+                                    <th>Target Outlet</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>AI-Powered Upselling</strong></td>
+                                    <td>
+                                        <ul>
+                                            <li>Online app suggests add-ons based on basket (e.g., "Customers who bought X also bought Y")</li>
+                                            <li>Predictive recommendations based on order history</li>
+                                            <li>Personalized offers based on customer preferences</li>
+                                        </ul>
+                                    </td>
+                                    <td>Hamdan, Al Khalidiyah</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Subscription Model</strong></td>
+                                    <td>
+                                        <ul>
+                                            <li>"Unlimited Delivery" for AED 99/month (min. AED 30/order)</li>
+                                            <li>Monthly meal plans with fixed pricing</li>
+                                            <li>Exclusive subscriber menu items</li>
+                                        </ul>
+                                    </td>
+                                    <td>All AUH outlets</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Geo-Targeted Promos</strong></td>
+                                    <td>
+                                        <ul>
+                                            <li>Push "AED 10 off next order" to customers near competitors (e.g., DXB borders)</li>
+                                            <li>Location-specific offers based on demographic data</li>
+                                            <li>Competitor price matching in strategic areas</li>
+                                        </ul>
+                                    </td>
+                                    <td>Shabiya-11, Muroor</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Implementation Plan Section -->
+                <section id="implementation-plan" class="section">
+                    <h2><i class="fas fa-tasks"></i> Implementation Plan</h2>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-calendar-alt"></i> Implementation Timeline</h3>
+                        <canvas id="implementation-timeline-chart"></canvas>
+                    </div>
+                    
+                    <h3>Key Milestones</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Timeline</th>
+                                <th>Key Activities</th>
+                                <th>Success Metrics</th>
+                                <th>Responsible</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Week 1-2</strong></td>
+                                <td>
+                                    <ul>
+                                        <li>Complete detailed AOV analysis</li>
+                                        <li>Identify specific low-value items</li>
+                                        <li>Develop outlet-specific strategies</li>
+                                    </ul>
+                                </td>
+                                <td>Analysis completed</td>
+                                <td>Operations Manager</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Week 3-4</strong></td>
+                                <td>
+                                    <ul>
+                                        <li>Menu & pricing adjustments</li>
+                                        <li>System updates for new pricing</li>
+                                        <li>Staff training on new strategies</li>
+                                    </ul>
+                                </td>
+                                <td>Changes implemented</td>
+                                <td>Outlet Managers</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Month 2</strong></td>
+                                <td>
+                                    <ul>
+                                        <li>Monitor initial results</li>
+                                        <li>Adjust strategies based on feedback</li>
+                                        <li>Prepare for Phase 2</li>
+                                    </ul>
+                                </td>
+                                <td>AOV stabilization</td>
+                                <td>Marketing Manager</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Month 3-6</strong></td>
+                                <td>
+                                    <ul>
+                                        <li>Phase 2 implementation</li>
+                                        <li>Loyalty program launch</li>
+                                        <li>Dynamic pricing system</li>
+                                    </ul>
+                                </td>
+                                <td>AOV growth 5%</td>
+                                <td>Operations Team</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Monitoring Section -->
+                <section id="monitoring" class="section">
+                    <h2><i class="fas fa-chart-bar"></i> Monitoring & Validation Framework</h2>
+                    
+                    <h3>KPIs to Track</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Target (6 Months)</th>
+                                <th>Measurement Frequency</th>
+                                <th>Responsible</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Overall AUH AOV</strong></td>
+                                <td>AED 48.00</td>
+                                <td>Weekly</td>
+                                <td>Operations Manager</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Shabiya-11 Online AOV</strong></td>
+                                <td>AED 42.00</td>
+                                <td>Daily (first month)</td>
+                                <td>Shabiya-11 Manager</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Premium Item Sales %</strong></td>
+                                <td>25% of revenue</td>
+                                <td>Monthly</td>
+                                <td>Marketing Manager</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Discount Redemption Rate</strong></td>
+                                <td>< 15% of orders</td>
+                                <td>Weekly</td>
+                                <td>Finance Manager</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-line"></i> AOV Progress Tracking</h3>
+                        <canvas id="aov-progress-chart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Expected Outcomes Section -->
+                <section id="expected-outcomes" class="section">
+                    <h2><i class="fas fa-bullseye"></i> Expected Outcomes</h2>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-area"></i> Projected AOV Recovery</h3>
+                        <canvas id="projected-aov-chart"></canvas>
+                    </div>
+                    
+                    <h3>Timeline Expectations</h3>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Timeline</th>
+                                <th>Expected Outcome</th>
+                                <th>Key Indicator</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>3 Months</strong></td>
+                                <td>
+                                    <ul>
+                                        <li>Shabiya-11 online AOV recovers to AED 40</li>
+                                        <li>AUH overall AOV reaches AED 46.50</li>
+                                        <li>Hamdan bundle optimization shows 5% AOV improvement</li>
+                                    </ul>
+                                </td>
+                                <td>Stabilization achieved</td>
+                            </tr>
+                            <tr>
+                                <td><strong>6 Months</strong></td>
+                                <td>
+                                    <ul>
+                                        <li>Hamdan/Al Khalidiyah AOV restored to 2024 levels</li>
+                                        <li>Premium menu contributes 20% revenue</li>
+                                        <li>Dynamic pricing system fully operational</li>
+                                    </ul>
+                                </td>
+                                <td>Growth phase begins</td>
+                            </tr>
+                            <tr>
+                                <td><strong>12 Months</strong></td>
+                                <td>
+                                    <ul>
+                                        <li>AUH revenue grows 10% (AED 3.3M → AED 3.63M)</li>
+                                        <li>Online AOV matches DXB (AED 49+)</li>
+                                        <li>AI-powered upselling contributes 15% to AOV growth</li>
+                                    </ul>
+                                </td>
+                                <td>Full optimization</td>
+                            </tr>
+                        </tbody>
+                    </table>
                     
                     <div class="alert alert-success">
-                        <h3><i class="fas fa-chart-line"></i> Performance Insights</h3>
-                        <p>Comprehensive analysis of business performance between 2024 and 2025.</p>
-                    </div>
-
-                    <div class="insights-grid">
-                        <div class="insight-card">
-                            <h4><i class="fas fa-trophy"></i> Top Performing Branch (2024)</h4>
-                            <p>Electra branch led with ${sum(branch_data[branch]['2024_sales']) for branch in branch_data):,} in sales.</p>
-                            <div class="insight-metric">
-                                <div class="insight-metric-value">${sum(branch_data[branch]['2024_sales']) for branch in branch_data):,}</div>
-                                <div class="insight-metric-label">Total Sales</div>
-                            </div>
-                        </div>
-
-                        <div class="insight-card">
-                            <h4><i class="fas fa-chart-line"></i> Sales Trend Analysis</h4>
-                            <p>Average order value increased by {((metrics2025['averageOrderValue'] - metrics2024['averageOrderValue']) / metrics2024['averageOrderValue'] * 100):.1f}%.</p>
-                            <div class="insight-metric">
-                                <div class="insight-metric-value">{((metrics2025['averageOrderValue'] - metrics2024['averageOrderValue']) / metrics2024['averageOrderValue'] * 100):.1f}%</div>
-                                <div class="insight-metric-label">Avg Value Change</div>
-                            </div>
-                        </div>
-
-                        <div class="insight-card">
-                            <h4><i class="fas fa-mobile-alt"></i> Channel Performance</h4>
-                            <p>Delivery channel market share decreased from {metrics2024['deliveryPercentage']:.1f}% to {metrics2025['deliveryPercentage']:.1f}%.</p>
-                            <div class="insight-metric">
-                                <div class="insight-metric-value">{((metrics2025['deliveryPercentage'] - metrics2024['deliveryPercentage']) / metrics2024['deliveryPercentage'] * 100):.1f}%</div>
-                                <div class="insight-metric-label">Delivery Channel Change</div>
-                            </div>
-                        </div>
-
-                        <div class="insight-card">
-                            <h4><i class="fas fa-calendar-alt"></i> Seasonal Patterns</h4>
-                            <p>Summer months (June-August) account for {(sum(sum(branch_data[branch]['2024_sales'][5:8]) for branch in branch_data) / sum(sum(branch_data[branch]['2024_sales']) for branch in branch_data) * 100):.1f}% of total sales.</p>
-                            <div class="insight-metric">
-                                <div class="insight-metric-value">{(sum(sum(branch_data[branch]['2024_sales'][5:8]) for branch in branch_data) / sum(sum(branch_data[branch]['2024_sales']) for branch in branch_data) * 100):.1f}%</div>
-                                <div class="insight-metric-label">Summer Sales Share</div>
-                            </div>
-                        </div>
-
-                        <div class="insight-card">
-                            <h4><i class="fas fa-bullseye"></i> Growth Opportunities</h4>
-                            <p>Potential to increase order volume by {metrics2024['totalOrders'] - metrics2025['totalOrders']:,.0f} orders by improving delivery efficiency.</p>
-                            <div class="insight-metric">
-                                <div class="insight-metric-value">{metrics2024['totalOrders'] - metrics2025['totalOrders']:,.0f}</div>
-                                <div class="insight-metric-label">Potential Order Volume</div>
-                            </div>
-                        </div>
-
-                        <div class="insight-card">
-                            <h4><i class="fas fa-exclamation-triangle"></i> Areas for Improvement</h4>
-                            <p>Sales declined by {abs(growth_rate):.1f}% in 2025, requiring strategic interventions.</p>
-                            <div class="insight-metric">
-                                <div class="insight-metric-value">{abs(growth_rate):.1f}%</div>
-                                <div class="insight-metric-label">Sales Decline</div>
-                            </div>
-                        </div>
+                        <h3><i class="fas fa-lightbulb"></i> Success Factors</h3>
+                        <p>Muroor's success (AOV +13.13%) proves AOV growth is achievable. Replicate its "quality-over-quantity" approach:</p>
+                        <ul>
+                            <li>Limited high-value menu items</li>
+                            <li>Minimal discounts</li>
+                            <li>Focus on affluent neighborhoods</li>
+                        </ul>
                     </div>
                 </section>
             </main>
@@ -1029,467 +1623,599 @@ def generate_dashboard_html(branch_data, output_file="Crispy_Chicken_Dashboard.h
     </div>
 
     <script>
-        // Dashboard data
-        const dashboardData = {json.dumps(dashboard_data)};
-        
-        // Initialize charts
-        document.addEventListener('DOMContentLoaded', function() {{
-            // Initialize Year Overview Chart
-            const yearCtx = document.getElementById('year-overview-chart').getContext('2d');
-            new Chart(yearCtx, {{
+        // AOV data for Jan-Sep comparison
+        const aovData = {
+            2024: {
+                overall: 48.12,
+                deliveryCall: 47.20,
+                online: 49.18,
+                outlets: {
+                    Hamdan: {
+                        overall: 48.15,
+                        deliveryCall: 45.71,
+                        online: 47.78
+                    },
+                    AlKhalidiyah: {
+                        overall: 51.37,
+                        deliveryCall: 51.37,
+                        online: 50.75
+                    },
+                    Shabiya11: {
+                        overall: 47.13,
+                        deliveryCall: 44.81,
+                        online: 47.13
+                    },
+                    Muroor: {
+                        overall: 48.15,
+                        deliveryCall: 48.67,
+                        online: 54.40
+                    }
+                },
+                monthly: [48.25, 48.10, 48.05, 48.15, 48.20, 48.00, 47.85, 47.90, 48.12]
+            },
+            2025: {
+                overall: 46.10,
+                deliveryCall: 46.94,
+                online: 45.57,
+                outlets: {
+                    Hamdan: {
+                        overall: 45.13,
+                        deliveryCall: 45.13,
+                        online: 45.14
+                    },
+                    AlKhalidiyah: {
+                        overall: 49.21,
+                        deliveryCall: 49.44,
+                        online: 48.99
+                    },
+                    Shabiya11: {
+                        overall: 41.12,
+                        deliveryCall: 46.57,
+                        online: 35.66
+                    },
+                    Muroor: {
+                        overall: 54.48,
+                        deliveryCall: 48.81,
+                        online: 60.15
+                    }
+                },
+                monthly: [47.10, 46.85, 46.20, 45.90, 45.75, 45.50, 45.25, 45.40, 46.10]
+            }
+        };
+
+        // Initialize dashboard
+        function initializeDashboard() {
+            initializeCharts();
+            setupEventListeners();
+        }
+
+        // Initialize Charts
+        function initializeCharts() {
+            // Overall AOV Comparison Chart
+            const overallAovComparisonCtx = document.getElementById('overall-aov-comparison-chart').getContext('2d');
+            
+            new Chart(overallAovComparisonCtx, {
                 type: 'bar',
-                data: {{
-                    labels: ['Total Sales', 'Total Orders', 'Avg Order Value', 'Delivery Sales', 'Delivery Orders'],
-                    datasets: [{{
-                        label: '2024',
-                        data: [
-                            {metrics2024['totalSales']},
-                            {metrics2024['totalOrders']},
-                            {metrics2024['averageOrderValue']},
-                            {metrics2024['totalDeliverySales']},
-                            {metrics2024['totalDeliveryOrders']}
-                        ],
-                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
-                        borderColor: 'rgba(231, 76, 60, 1)',
-                        borderWidth: 1
-                    }}, {{
-                        label: '2025',
-                        data: [
-                            {metrics2025['totalSales']},
-                            {metrics2025['totalOrders']},
-                            {metrics2025['averageOrderValue']},
-                            {metrics2025['totalDeliverySales']},
-                            {metrics2025['totalDeliveryOrders']}
-                        ],
-                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                        borderColor: 'rgba(52, 152, 219, 1)',
-                        borderWidth: 1
-                    }}]
-                }},
-                options: {{
+                data: {
+                    labels: ['Overall AOV', 'Delivery Call AOV', 'Online AOV'],
+                    datasets: [
+                        {
+                            label: '2024 (Jan-Sep)',
+                            data: [aovData[2024].overall, aovData[2024].deliveryCall, aovData[2024].online],
+                            backgroundColor: 'rgba(26, 115, 232, 0.7)',
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '2025 (Jan-Sep)',
+                            data: [aovData[2025].overall, aovData[2025].deliveryCall, aovData[2025].online],
+                            backgroundColor: 'rgba(234, 67, 53, 0.7)',
+                            borderColor: 'rgba(234, 67, 53, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
                     responsive: true,
-                    plugins: {{
-                        legend: {{
-                            position: 'top',
-                        }},
-                        title: {{
-                            display: true,
-                            text: 'Year-over-Year Performance Comparison'
-                        }}
-                    }},
-                    scales: {{
-                        y: {{
-                            beginAtZero: true,
-                            ticks: {{
-                                callback: function(value) {{
-                                    if (this.chart.data.labels[this.dataIndex] === 'Total Sales' || 
-                                        this.chart.data.labels[this.dataIndex] === 'Delivery Sales') {{
-                                        return '$' + value.toLocaleString();
-                                    }}
-                                    return value.toLocaleString();
-                                }}
-                            }}
-                        }}
-                    }}
-                }}
-            }});
-
-            // Initialize Branch Comparison Chart
-            const branchCtx = document.getElementById('branch-comparison-chart').getContext('2d');
-            const branchLabels = {json.dumps(dashboard_data['branches'])};
-            const branchData2024 = {json.dumps([sum(dashboard_data['data2024']['sales'][branch]) for branch in dashboard_data['branches']])};
-            const branchData2025 = {json.dumps([sum(dashboard_data['data2025']['sales'][branch]) for branch in dashboard_data['branches']])};
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'AOV (AED)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': AED ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
             
-            new Chart(branchCtx, {{
+            // AOV Comparison by Outlet and Channel
+            const aovComparisonCtx = document.getElementById('aov-comparison-chart').getContext('2d');
+            
+            new Chart(aovComparisonCtx, {
                 type: 'bar',
-                data: {{
-                    labels: branchLabels,
-                    datasets: [{{
-                        label: '2024 Sales',
-                        data: branchData2024,
-                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
-                        borderColor: 'rgba(231, 76, 60, 1)',
-                        borderWidth: 1
-                    }}, {{
-                        label: '2025 Sales',
-                        data: branchData2025,
-                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                        borderColor: 'rgba(52, 152, 219, 1)',
-                        borderWidth: 1
-                    }}]
-                }},
-                options: {{
+                data: {
+                    labels: ['Hamdan', 'Al Khalidiyah', 'Shabiya-11', 'Muroor'],
+                    datasets: [
+                        {
+                            label: '2024 Delivery Call AOV',
+                            data: [
+                                aovData[2024].outlets.Hamdan.deliveryCall,
+                                aovData[2024].outlets.AlKhalidiyah.deliveryCall,
+                                aovData[2024].outlets.Shabiya11.deliveryCall,
+                                aovData[2024].outlets.Muroor.deliveryCall
+                            ],
+                            backgroundColor: 'rgba(26, 115, 232, 0.7)',
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '2025 Delivery Call AOV',
+                            data: [
+                                aovData[2025].outlets.Hamdan.deliveryCall,
+                                aovData[2025].outlets.AlKhalidiyah.deliveryCall,
+                                aovData[2025].outlets.Shabiya11.deliveryCall,
+                                aovData[2025].outlets.Muroor.deliveryCall
+                            ],
+                            backgroundColor: 'rgba(52, 168, 83, 0.7)',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '2024 Online AOV',
+                            data: [
+                                aovData[2024].outlets.Hamdan.online,
+                                aovData[2024].outlets.AlKhalidiyah.online,
+                                aovData[2024].outlets.Shabiya11.online,
+                                aovData[2024].outlets.Muroor.online
+                            ],
+                            backgroundColor: 'rgba(234, 67, 53, 0.7)',
+                            borderColor: 'rgba(234, 67, 53, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '2025 Online AOV',
+                            data: [
+                                aovData[2025].outlets.Hamdan.online,
+                                aovData[2025].outlets.AlKhalidiyah.online,
+                                aovData[2025].outlets.Shabiya11.online,
+                                aovData[2025].outlets.Muroor.online
+                            ],
+                            backgroundColor: 'rgba(251, 188, 5, 0.7)',
+                            borderColor: 'rgba(251, 188, 5, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
                     responsive: true,
-                    plugins: {{
-                        legend: {{
-                            position: 'top',
-                        }},
-                        title: {{
-                            display: true,
-                            text: 'Branch Sales Comparison'
-                        }}
-                    }},
-                    scales: {{
-                        y: {{
-                            beginAtZero: true,
-                            ticks: {{
-                                callback: function(value) {{
-                                    return '$' + value.toLocaleString();
-                                }}
-                            }}
-                        }}
-                    }}
-                }}
-            }});
-
-            // Populate Outlet Cards
-            const outletGrid = document.getElementById('outlet-grid');
-            outletGrid.innerHTML = '';
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'AOV (AED)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': AED ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
             
-            {json.dumps(dashboard_data['branches'])}.forEach(branch => {{
-                const sales2024 = {json.dumps([sum(dashboard_data['data2024']['sales'][branch]) for branch in dashboard_data['branches']])};
-                const sales2025 = {json.dumps([sum(dashboard_data['data2025']['sales'][branch]) for branch in dashboard_data['branches']])};
-                const growth = ((sales2025 - sales2024) / sales2024 * 100).toFixed(1);
-                const badgeClass = growth > 0 ? 'positive' : growth < 0 ? 'negative' : 'neutral';
-                
-                const card = document.createElement('div');
-                card.className = `outlet-card ${{growth > 0 ? 'year2025' : 'year2024'}}`;
-                card.innerHTML = `
-                    <h3>
-                        {json.dumps(dashboard_data['branchNames'])[branch]}
-                        <span class="comparison-badge ${{badgeClass}}">
-                            ${{growth > 0 ? '+' : ''}}${{growth}}%
-                        </span>
-                    </h3>
-                    <div class="outlet-stats">
-                        <div class="outlet-stat">
-                            <div class="outlet-stat-label">2024 Sales</div>
-                            <div class="outlet-stat-value">${{$sales2024.toLocaleString()}}</div>
-                        </div>
-                        <div class="outlet-stat">
-                            <div class="outlet-stat-label">2025 Sales</div>
-                            <div class="outlet-stat-value">${{$sales2025.toLocaleString()}}</div>
-                        </div>
-                    </div>
-                `;
-                outletGrid.appendChild(card);
-            }});
-
-            // Populate Delivery Counts Table
-            const deliveryTbody = document.getElementById('delivery-counts-tbody');
-            deliveryTbody.innerHTML = '';
+            // Monthly AOV Trends Chart
+            const monthlyAovTrendsCtx = document.getElementById('monthly-aov-trends-chart').getContext('2d');
             
-            {json.dumps(dashboard_data['branches'])}.forEach(branch => {{
-                const row = document.createElement('tr');
-                row.innerHTML = `<td class="branch-name">${{json.dumps(dashboard_data['branchNames'])[branch]}}</td>`;
-                
-                {json.dumps(dashboard_data['months'])}.forEach((month, index) => {{
-                    const count2024 = {json.dumps(dashboard_data['data2024']['orders'])[branch][index]};
-                    const count2025 = {json.dumps(dashboard_data['data2025']['orders'])[branch][index]};
-                    const change = count2024 > 0 ? ((count2025 - count2024) / count2024 * 100).toFixed(1) : 0;
-                    
-                    row.innerHTML += `
-                        <td>${{count2024}}</td>
-                        <td>${{count2025}}</td>
-                        <td class="trend-cell">
-                            <span class="${{change > 0 ? 'trend-up' : change < 0 ? 'trend-down' : 'trend-neutral'}}">
-                                ${{change > 0 ? '+' : ''}}${{change}}%
-                            </span>
-                        </td>
-                    `;
-                }});
-                
-                deliveryTbody.appendChild(row);
-            }});
-
-            // Initialize Monthly Charts
-            const monthlySalesCtx = document.getElementById('monthly-sales-chart').getContext('2d');
-            const monthlyTransactionsCtx = document.getElementById('monthly-transactions-chart').getContext('2d');
-            
-            const monthlySales2024 = {json.dumps([sum([dashboard_data['data2024']['sales'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])};
-            const monthlySales2025 = {json.dumps([sum([dashboard_data['data2025']['sales'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])};
-            const monthlyOrders2024 = {json.dumps([sum([dashboard_data['data2024']['orders'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])};
-            const monthlyOrders2025 = {json.dumps([sum([dashboard_data['data2025']['orders'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])};
-            
-            new Chart(monthlySalesCtx, {{
+            new Chart(monthlyAovTrendsCtx, {
                 type: 'line',
-                data: {{
-                    labels: {json.dumps([dashboard_data['monthNames'][month] for month in dashboard_data['months']])},
-                    datasets: [{{
-                        label: '2024 Sales',
-                        data: monthlySales2024,
-                        borderColor: 'rgba(231, 76, 60, 1)',
-                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                        fill: true
-                    }}, {{
-                        label: '2025 Sales',
-                        data: monthlySales2025,
-                        borderColor: 'rgba(52, 152, 219, 1)',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        fill: true
-                    }}]
-                }},
-                options: {{
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        {
+                            label: '2024 AOV',
+                            data: aovData[2024].monthly,
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: '2025 AOV',
+                            data: aovData[2025].monthly,
+                            borderColor: 'rgba(234, 67, 53, 1)',
+                            backgroundColor: 'rgba(234, 67, 53, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
                     responsive: true,
-                    plugins: {{
-                        legend: {{
-                            position: 'top',
-                        }},
-                        title: {{
-                            display: true,
-                            text: 'Monthly Sales Comparison'
-                        }}
-                    }},
-                    scales: {{
-                        y: {{
-                            beginAtZero: true,
-                            ticks: {{
-                                callback: function(value) {{
-                                    return '$' + value.toLocaleString();
-                                }}
-                            }}
-                        }}
-                    }}
-                }}
-            }});
-
-            new Chart(monthlyTransactionsCtx, {{
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'AOV (AED)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': AED ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Monthly Volume Chart
+            const monthlyVolumeCtx = document.getElementById('monthly-volume-chart').getContext('2d');
+            
+            // Generate mock volume data
+            const volumeData2024 = [12500, 12300, 12100, 12400, 12800, 13000, 12700, 12600, 12900];
+            const volumeData2025 = [13200, 12900, 11800, 11500, 14000, 13800, 13500, 13300, 13000];
+            
+            new Chart(monthlyVolumeCtx, {
                 type: 'bar',
-                data: {{
-                    labels: {json.dumps([dashboard_data['monthNames'][month] for month in dashboard_data['months']])},
-                    datasets: [{{
-                        label: '2024 Orders',
-                        data: monthlyOrders2024,
-                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
-                        borderColor: 'rgba(231, 76, 60, 1)',
-                        borderWidth: 1
-                    }}, {{
-                        label: '2025 Orders',
-                        data: monthlyOrders2025,
-                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
-                        borderColor: 'rgba(52, 152, 219, 1)',
-                        borderWidth: 1
-                    }}]
-                }},
-                options: {{
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+                    datasets: [
+                        {
+                            label: '2024 Order Volume',
+                            data: volumeData2024,
+                            backgroundColor: 'rgba(26, 115, 232, 0.7)',
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '2025 Order Volume',
+                            data: volumeData2025,
+                            backgroundColor: 'rgba(52, 168, 83, 0.7)',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
                     responsive: true,
-                    plugins: {{
-                        legend: {{
-                            position: 'top',
-                        }},
-                        title: {{
-                            display: true,
-                            text: 'Monthly Transaction Volume'
-                        }}
-                    }},
-                    scales: {{
-                        y: {{
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
                             beginAtZero: true,
-                            ticks: {{
-                                callback: function(value) {{
-                                    return value.toLocaleString();
-                                }}
-                            }}
-                        }}
-                    }}
-                }}
-            }});
+                            title: {
+                                display: true,
+                                text: 'Number of Orders'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' orders';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Channel Contribution Chart
+            const channelContributionCtx = document.getElementById('channel-contribution-chart').getContext('2d');
+            
+            new Chart(channelContributionCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Delivery Call AOV Decline', 'Online AOV Decline'],
+                    datasets: [{
+                        data: [0.55, 7.34],
+                        backgroundColor: [
+                            'rgba(26, 115, 232, 0.7)',
+                            'rgba(234, 67, 53, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(26, 115, 232, 1)',
+                            'rgba(234, 67, 53, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ' + context.parsed + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Channel AOV by Outlet Chart
+            const channelAovByOutletCtx = document.getElementById('channel-aov-by-outlet-chart').getContext('2d');
+            
+            new Chart(channelAovByOutletCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Hamdan', 'Al Khalidiyah', 'Shabiya-11', 'Muroor'],
+                    datasets: [
+                        {
+                            label: 'Delivery Call AOV (2025)',
+                            data: [
+                                aovData[2025].outlets.Hamdan.deliveryCall,
+                                aovData[2025].outlets.AlKhalidiyah.deliveryCall,
+                                aovData[2025].outlets.Shabiya11.deliveryCall,
+                                aovData[2025].outlets.Muroor.deliveryCall
+                            ],
+                            backgroundColor: 'rgba(26, 115, 232, 0.7)',
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Online AOV (2025)',
+                            data: [
+                                aovData[2025].outlets.Hamdan.online,
+                                aovData[2025].outlets.AlKhalidiyah.online,
+                                aovData[2025].outlets.Shabiya11.online,
+                                aovData[2025].outlets.Muroor.online
+                            ],
+                            backgroundColor: 'rgba(52, 168, 83, 0.7)',
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'AOV (AED)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': AED ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Implementation Timeline Chart
+            const implementationTimelineCtx = document.getElementById('implementation-timeline-chart').getContext('2d');
+            
+            new Chart(implementationTimelineCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1-2', 'Week 3-4', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6'],
+                    datasets: [
+                        {
+                            label: 'Hamdan AOV Progress',
+                            data: [45.13, 45.40, 45.75, 46.15, 46.50, 46.90, 47.35],
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Al Khalidiyah AOV Progress',
+                            data: [49.21, 49.35, 49.60, 49.90, 50.25, 50.65, 51.10],
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Shabiya-11 AOV Progress',
+                            data: [35.66, 37.20, 39.00, 40.80, 42.00, 43.30, 44.75],
+                            borderColor: 'rgba(234, 67, 53, 1)',
+                            backgroundColor: 'rgba(234, 67, 53, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Muroor AOV Progress',
+                            data: [54.48, 54.70, 55.00, 55.40, 55.90, 56.50, 57.20],
+                            borderColor: 'rgba(251, 188, 5, 1)',
+                            backgroundColor: 'rgba(251, 188, 5, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'AOV (AED)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': AED ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // AOV Progress Chart
+            const aovProgressCtx = document.getElementById('aov-progress-chart').getContext('2d');
+            
+            new Chart(aovProgressCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: 'Actual AOV (2025)',
+                            data: [46.10, 46.10, 46.10, 46.10, 46.10, 46.10, 46.10, 46.10, 46.10, null, null, null],
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Projected AOV',
+                            data: [46.10, 46.40, 46.75, 47.15, 47.60, 48.10, 48.65, 49.25, 49.90, 50.60, 51.35, 52.15],
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderDash: [5, 5],
+                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'AOV (AED)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': AED ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Projected AOV Chart
+            const projectedAovCtx = document.getElementById('projected-aov-chart').getContext('2d');
+            
+            new Chart(projectedAovCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan 2025', 'Mar 2025', 'May 2025', 'Jul 2025', 'Sep 2025', 'Nov 2025', 'Jan 2026', 'Mar 2026', 'May 2026', 'Jul 2026', 'Sep 2026', 'Nov 2026'],
+                    datasets: [
+                        {
+                            label: 'Actual AOV',
+                            data: [46.10, 46.10, 46.10, 46.10, 46.10, 46.10, null, null, null, null, null, null],
+                            borderColor: 'rgba(26, 115, 232, 1)',
+                            backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Projected AOV',
+                            data: [46.10, 46.40, 46.75, 47.15, 47.60, 48.10, 48.65, 49.25, 49.90, 50.60, 51.35, 52.15],
+                            borderColor: 'rgba(52, 168, 83, 1)',
+                            borderDash: [5, 5],
+                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'AOV (AED)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': AED ' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
-            // Navigation functionality
-            document.querySelectorAll('.menu-item').forEach(item => {{
-                item.addEventListener('click', function() {{
-                    document.querySelectorAll('.menu-item').forEach(menu => menu.classList.remove('active'));
+        // Setup Event Listeners
+        function setupEventListeners() {
+            // Menu items
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('active'));
                     this.classList.add('active');
                     
-                    const targetSection = this.dataset.section;
-                    document.querySelectorAll('.section').forEach(section => {{
-                        section.classList.remove('active');
-                    }});
-                    document.getElementById(targetSection).classList.add('active');
-                }});
-            }});
-
-            // Year selection functionality
-            document.querySelectorAll('.year-btn').forEach(button => {{
-                button.addEventListener('click', function() {{
-                    document.querySelectorAll('.year-btn').forEach(btn => btn.classList.remove('active'));
+                    const section = this.getAttribute('data-section');
+                    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                    document.getElementById(section).classList.add('active');
+                });
+            });
+            
+            // Tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     
-                    const selectedYear = this.dataset.year;
-                    updateDashboard(selectedYear);
-                }});
-            }});
+                    const tabId = this.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.style.display = 'none';
+                    });
+                    document.getElementById(tabId).style.display = 'block';
+                });
+            });
+        }
 
-            function updateDashboard(year) {{
-                // Update stat cards based on year selection
-                if (year === '2024') {{
-                    document.querySelectorAll('.stat-card.year2025, .outlet-card.year2025').forEach(card => {{
-                        card.style.opacity = '0.5';
-                        card.style.transform = 'scale(0.98)';
-                    }});
-                    document.querySelectorAll('.stat-card.year2024, .outlet-card.year2024').forEach(card => {{
-                        card.style.opacity = '1';
-                        card.style.transform = 'scale(1)';
-                    }});
-                }} else if (year === '2025') {{
-                    document.querySelectorAll('.stat-card.year2024, .outlet-card.year2024').forEach(card => {{
-                        card.style.opacity = '0.5';
-                        card.style.transform = 'scale(0.98)';
-                    }});
-                    document.querySelectorAll('.stat-card.year2025, .outlet-card.year2025').forEach(card => {{
-                        card.style.opacity = '1';
-                        card.style.transform = 'scale(1)';
-                    }});
-                }} else if (year === 'comparison') {{
-                    document.querySelectorAll('.stat-card, .outlet-card').forEach(card => {{
-                        card.style.opacity = '1';
-                        card.style.transform = 'scale(1)';
-                    }});
-                }}
-            }}
-        }});
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
     </script>
 </body>
 </html>
-"""
-    
-    # Write the HTML file
-    with open(output_file, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    
-    print(f"Dashboard generated successfully: {output_file}")
-
-# --------------------------
-# --- MAIN EXECUTION ---
-# --------------------------
-
-if __name__ == "__main__":
-    # Your provided branch data
-    branch_data_text = """
-    Hamdan												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	2757	119,300	569	25,546	3326	144,846	2,797	130,332	771	39,204	3568	169,536
-    Feb	2460	111,546	644	28,689	3104	140,235	2,797	119,033	661	33,373	3458	152,406
-    Mar	1877	87,783	493	23,967	2370	111,750	2,474	112,730	615	29,535	3089	142,265
-    Apr	2363	106,625	750	35,261	3113	141,886	2,815	134,005	674	33,433	3489	167,438
-    May	2515	117,066	905	39,090	3420	156,156	3,066	142,948	733	35,454	3799	178,402
-    Jun	2318	106,229	800	38,061	3118	144,290	3,261	153,855	825	40,787	4086	194,642
-    Jul	2557	109,205	1007	41,582	3564	150,787	3,236	140,646	876	39,832	4112	180,478
-    Aug	2247	103,184	771	34,835	3018	138,019	3,267	146,010	756	32,362	4023	178,372
-    Sep	2345	106,561	889	41,146	3234	147,707	2,658	124,891	547	27,887	3205	152,778
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	21439	967499	6828	308177	28267	1275676	26371	1204450	6458	311867	32829	1516317
-    Khalidiya												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	1241	60,360	292	13,749	1533	74109	1,444	73,203	412	21,135	1,856	94338
-    Feb	1054	51,718	305	14,662	1359	66380	1,270	64,910	417	21,217	1687	86127
-    Mar	891	44,621	198	12,644	1089	57265	1,114	56,006	321	16,169	1435	72175
-    Apr	1156	54,785	312	16,370	1468	71155	1,268	63,867	390	20,903	1658	84770
-    May	1083	54,610	439	20,318	1522	74928	1,423	71,236	366	19,685	1789	90921
-    Jun	1078	56,860	377	19,102	1455	75962	1,467	78,402	399	21,759	1866	100161
-    Jul	1097	51,618	426	17,766	1523	69384	1,438	72,570	447	22,254	1885	94824
-    Aug	1032	51,039	365	17,361	1397	68400	1,505	70,910	388	18,936	1893	89846
-    Sep	1144	57,769	316	16,495	1460	74264	1,264	61,308	281	14,826	1545	76134
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	9776	483380.4	3030	148466.6	12806	631847	12193	612412	3421	176884	15614	789296
-    Shabiya												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	1201	52,778	177	7,398	1378	60176	1,184	53,600	244	11,054	1,428	64654
-    Feb	1136	51,105	143	6,340	1279	57445	1,260	56,902	222	11,743	1482	68645
-    Mar	906	40,273	74	3,282	980	43555	1,167	50,445	179	8,011	1346	58456
-    Apr	1246	56,981	245	6,103	1491	63084	1,434	63,642	163	7,720	1597	71362
-    May	1187	56,703	308	6,438	1495	63141	1,380	62,211	204	10,015	1584	72226
-    Jun	1114	54,611	306	6,600	1420	61211	1,396	64,920	238	11,933	1634	76853
-    Jul	1177	55,160	404	16,910	1581	72070	1,366	60,095	223	9,793	1589	69888
-    Aug	1162	55,336	260	12,568	1422	67904	1,388	58,704	237	11,299	1625	70003
-    Sep	1269	61,290	216	10,420	1485	71709.6	1,135	50,504	179	8,747	1314	59251
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	10398	484236.6	2133	76059	12531	560295.6	11710	521023	1889	90315	13599	611338
-    Muroor												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	1255	59,749	72	3,352	1327	63101	1,140	56,696	154	8,231	1,294	64927
-    Feb	1199	58,438	74	3,939	1273	62377	1,078	54,156	199	11,050	1277	65206
-    Mar	817	41,808	67	3,831	884	45639	899	45,652	143	7,874	1042	53526
-    Apr	1211	56,795	113	9,647	1324	66442	1,209	59,978	140	8,167	1349	68145
-    May	1094	54,302	131	9,039	1225	63341	1,294	61,958	174	9,704	1468	71662
-    Jun	1076	56,046	120	7,877	1196	63923	1,341	71,109	191	10,966	1532	82075
-    Jul	1114	53,001	125	6,127	1239	59128	1,360	63,143	176	9,358	1536	72501
-    Aug	912	44,361	116	5,884	1028	50245	1,386	64,842	157	8,392	1543	73234
-    Sep	973	46,523	119	6,668	1092	53190.8	1,295	61,113	146	7,504	1441	68617
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	9651	471023	937	56363.8	10588	527386.8	11002	538647	1480	81246	12482	619893
-    Electra												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	0	0	0	0	0	0	0	0	0	0	0	0
-    Feb	0	0	0	0	0	0	0	0	0	0	0	0
-    Mar	0	0	0	0	0	0	0	0	0	0	0	0
-    Apr	0	0	0	0	0	0	0	0	0	0	0	0
-    May	0	0	0	0	0	0	0	0	0	0	0	0
-    Jun	0	0	0	0	0	0	0	0	0	0	0	0
-    Jul	0	0	0	0	0	0	0	0	0	0	0	0
-    Aug	0	0	0	0	0	0	0	0	0	0	0	0
-    Sep	0	0	0	0	0	0	0	0	0	0	0	0
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	0	0	0	0	0	0	0	0	0	0	0	0
-    Barsha												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	1726	55752	156	8325	1882	64077	802	30120	365	19348	1,167	49468
-    Feb	1527	51699	178	8977	1705	60676	928	33556	304	16597	1232	50153
-    Mar	1427	42075	98	4816	1525	46891	928	30722	243	14043	1171	44765
-    Apr	1816	61422	181	9647	1997	71069	1173	40737	221	12546	1394	53283
-    May	881	36988	176	9039	1057	46027	1487	50460	290	16921	1777	67381
-    Jun	891	41436	161	7877	1052	49313	1488	48778	299	17351	1787	66129
-    Jul	1007	44627	173	8453	1180	53080	1740	56252	276	14681	2016	70933
-    Aug	901	49296	159	7404	1060	56700	1813	54008	250	13840	2063	67848
-    Sep	879	43360.8	167	8489.9	1046	51850.7	1749	54921	203	12385	1952	67306
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	11055	426655.8	1449	73027.9	12504	499683.7	12108	399554	2451	137712	14559	537266
-    Satwa												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	818	26849	210	7572	1028	34421	0	0	0	0	0	0
-    Feb	719	24349	240	9979	959	34328	0	0	0	0	0	0
-    Mar	645	21934	134	5832	779	27766	0	0	0	0	0	0
-    Apr	881	29154	283	11509	1164	40663	0	0	0	0	0	0
-    May	506	20631	348	13388	854	34019	555	22337	15	569	570	22906
-    Jun	463	21005	343	13815	806	34820	684	26665	148	6303	832	32968
-    Jul	528	24685	484	18083	1012	42768	795	27671	234	9685	1029	37356
-    Aug	492	22476	387	14903	879	37379	965	34732	299	11818	1264	46550
-    Sep	495	23066	376	15232	871	38298	799	27068	177	8026	976	35094
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	5547	214149	2805	110313	8352	324462	3798	138473	873	36401	4671	174874
-    Al Rigga												
-    Month	2025 Orders	2025 Sales	2025 online  Orders	2025 online  Sales	2025 Total Orders	2025 Total Sales	2024 Orders	2024 Sales	2024 online  Orders	2024 online  Sales	2024 Total Orders	2024 Total Sales
-    Jan	0	0	0	0	0	0	0	0	0	0	0	0
-    Feb	0	0	0	0	0	0	0	0	0	0	0	0
-    Mar	0	0	0	0	0	0	0	0	0	0	0	0
-    Apr	0	0	0	0	0	0	0	0	0	0	0	0
-    May	0	0	0	0	0	0	0	0	0	0	0	0
-    Jun	0	0	0	0	0	0	0	0	0	0	0	0
-    Jul	0	0	0	0	0	0	0	0	0	0	0	0
-    Aug	0	0	0	0	0	0	0	0	0	0	0	0
-    Sep	45	1993	0	0	45	1993	0	0	0	0	0	0
-    Oct	0	0	0	0	0	0	0	0	0	0	0	0
-    Nov	0	0	0	0	0	0	0	0	0	0	0	0
-    Dec	0	0	0	0	0	0	0	0	0	0	0	0
-    Total	45	1993	0	0	45	1993	0	0	0	0	0	0
-    """
-    
-    # Parse the branch data
-    branch_data = parse_branch_data(branch_data_text)
-    
-    # Generate the dashboard
-    generate_dashboard_html(branch_data)
