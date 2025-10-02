@@ -1,905 +1,1536 @@
+import pandas as pd
+import numpy as np
+from datetime import datetime
+import json
+import os
+from jinja2 import Template
+
+# --------------------------
+# --- DATA EXTRACTION & PROCESSING ---
+# --------------------------
+
+def extract_data():
+    """Extract all branch data from provided tables"""
+    # Hamdan data
+    Hamdan_2025_sales = {"Jan": 119300, "Feb": 111546, "Mar": 87783, "Apr": 106625, "May": 117066, "Jun": 106229, "Jul": 109205, "Aug": 103184, "Sep": 106561}
+    Hamdan_2025_orders = {"Jan": 2757, "Feb": 2460, "Mar": 1877, "Apr": 2363, "May": 2515, "Jun": 2318, "Jul": 2557, "Aug": 2247, "Sep": 2345}
+    Hamdan_2025_online_orders = {"Jan": 569, "Feb": 644, "Mar": 493, "Apr": 750, "May": 905, "Jun": 800, "Jul": 1007, "Aug": 771, "Sep": 889}
+    Hamdan_2025_online_sales = {"Jan": 25546, "Feb": 28689, "Mar": 23967, "Apr": 35261, "May": 39090, "Jun": 38061, "Jul": 41582, "Aug": 34835, "Sep": 41146}
+    
+    Hamdan_2024_sales = {"Jan": 130332, "Feb": 119033, "Mar": 112730, "Apr": 134005, "May": 142948, "Jun": 153855, "Jul": 140646, "Aug": 146010, "Sep": 124891}
+    Hamdan_2024_orders = {"Jan": 2797, "Feb": 2797, "Mar": 2474, "Apr": 2815, "May": 3066, "Jun": 3261, "Jul": 3236, "Aug": 3267, "Sep": 2658}
+    Hamdan_2024_online_orders = {"Jan": 771, "Feb": 661, "Mar": 615, "Apr": 674, "May": 733, "Jun": 825, "Jul": 876, "Aug": 756, "Sep": 547}
+    Hamdan_2024_online_sales = {"Jan": 39204, "Feb": 33373, "Mar": 29535, "Apr": 33433, "May": 35454, "Jun": 40787, "Jul": 39832, "Aug": 32362, "Sep": 27887}
+    
+    # Khalidiya data
+    Khalidiya_2025_sales = {"Jan": 60360, "Feb": 51718, "Mar": 44621, "Apr": 54785, "May": 54610, "Jun": 56860, "Jul": 51618, "Aug": 51039, "Sep": 57769}
+    Khalidiya_2025_orders = {"Jan": 1241, "Feb": 1054, "Mar": 891, "Apr": 1156, "May": 1083, "Jun": 1078, "Jul": 1097, "Aug": 1032, "Sep": 1144}
+    Khalidiya_2025_online_orders = {"Jan": 292, "Feb": 305, "Mar": 198, "Apr": 312, "May": 439, "Jun": 377, "Jul": 426, "Aug": 365, "Sep": 316}
+    Khalidiya_2025_online_sales = {"Jan": 13749, "Feb": 14662, "Mar": 12644, "Apr": 16370, "May": 20318, "Jun": 19102, "Jul": 17766, "Aug": 17361, "Sep": 16495}
+    
+    Khalidiya_2024_sales = {"Jan": 73203, "Feb": 64910, "Mar": 56006, "Apr": 63867, "May": 71236, "Jun": 78402, "Jul": 72570, "Aug": 70910, "Sep": 61308}
+    Khalidiya_2024_orders = {"Jan": 1444, "Feb": 1270, "Mar": 1114, "Apr": 1268, "May": 1423, "Jun": 1467, "Jul": 1438, "Aug": 1505, "Sep": 1264}
+    Khalidiya_2024_online_orders = {"Jan": 412, "Feb": 417, "Mar": 321, "Apr": 390, "May": 366, "Jun": 399, "Jul": 447, "Aug": 388, "Sep": 281}
+    Khalidiya_2024_online_sales = {"Jan": 21135, "Feb": 21217, "Mar": 16169, "Apr": 20903, "May": 19685, "Jun": 21759, "Jul": 22254, "Aug": 18936, "Sep": 14826}
+    
+    # Shabiya data
+    Shabiya_2025_sales = {"Jan": 52778, "Feb": 51105, "Mar": 40273, "Apr": 56981, "May": 56703, "Jun": 54611, "Jul": 55160, "Aug": 55336, "Sep": 61290}
+    Shabiya_2025_orders = {"Jan": 1201, "Feb": 1136, "Mar": 906, "Apr": 1246, "May": 1187, "Jun": 1114, "Jul": 1177, "Aug": 1162, "Sep": 1269}
+    Shabiya_2025_online_orders = {"Jan": 177, "Feb": 143, "Mar": 74, "Apr": 245, "May": 308, "Jun": 306, "Jul": 404, "Aug": 260, "Sep": 216}
+    Shabiya_2025_online_sales = {"Jan": 7398, "Feb": 6340, "Mar": 3282, "Apr": 6103, "May": 6438, "Jun": 6600, "Jul": 16910, "Aug": 12568, "Sep": 10420}
+    
+    Shabiya_2024_sales = {"Jan": 53600, "Feb": 56902, "Mar": 50445, "Apr": 63642, "May": 62211, "Jun": 64920, "Jul": 60095, "Aug": 58704, "Sep": 50504}
+    Shabiya_2024_orders = {"Jan": 1184, "Feb": 1260, "Mar": 1167, "Apr": 1434, "May": 1380, "Jun": 1396, "Jul": 1366, "Aug": 1388, "Sep": 1135}
+    Shabiya_2024_online_orders = {"Jan": 244, "Feb": 222, "Mar": 179, "Apr": 163, "May": 204, "Jun": 238, "Jul": 223, "Aug": 237, "Sep": 179}
+    Shabiya_2024_online_sales = {"Jan": 11054, "Feb": 11743, "Mar": 8011, "Apr": 7720, "May": 10015, "Jun": 11933, "Jul": 9793, "Aug": 11299, "Sep": 8747}
+    
+    # Muroor data
+    Muroor_2025_sales = {"Jan": 59749, "Feb": 58438, "Mar": 41808, "Apr": 56795, "May": 54302, "Jun": 56046, "Jul": 53001, "Aug": 44361, "Sep": 46523}
+    Muroor_2025_orders = {"Jan": 1255, "Feb": 1199, "Mar": 817, "Apr": 1211, "May": 1094, "Jun": 1076, "Jul": 1114, "Aug": 912, "Sep": 973}
+    Muroor_2025_online_orders = {"Jan": 72, "Feb": 74, "Mar": 67, "Apr": 113, "May": 131, "Jun": 120, "Jul": 125, "Aug": 116, "Sep": 119}
+    Muroor_2025_online_sales = {"Jan": 3352, "Feb": 3939, "Mar": 3831, "Apr": 9647, "May": 9039, "Jun": 7877, "Jul": 6127, "Aug": 5884, "Sep": 6668}
+    
+    Muroor_2024_sales = {"Jan": 56696, "Feb": 54156, "Mar": 45652, "Apr": 59978, "May": 61958, "Jun": 71109, "Jul": 63143, "Aug": 64842, "Sep": 61113}
+    Muroor_2024_orders = {"Jan": 1140, "Feb": 1078, "Mar": 899, "Apr": 1209, "May": 1294, "Jun": 1341, "Jul": 1360, "Aug": 1386, "Sep": 1295}
+    Muroor_2024_online_orders = {"Jan": 154, "Feb": 199, "Mar": 143, "Apr": 140, "May": 174, "Jun": 191, "Jul": 176, "Aug": 157, "Sep": 146}
+    Muroor_2024_online_sales = {"Jan": 8231, "Feb": 11050, "Mar": 7874, "Apr": 8167, "May": 9704, "Jun": 10966, "Jul": 9358, "Aug": 8392, "Sep": 7504}
+    
+    # Electra data (no data)
+    Electra_2025_sales = {}
+    Electra_2025_orders = {}
+    Electra_2025_online_orders = {}
+    Electra_2025_online_sales = {}
+    Electra_2024_sales = {}
+    Electra_2024_orders = {}
+    Electra_2024_online_orders = {}
+    Electra_2024_online_sales = {}
+    
+    # Barsha data
+    Barsha_2025_sales = {"Jan": 55752, "Feb": 51699, "Mar": 42075, "Apr": 61422, "May": 36988, "Jun": 41436, "Jul": 44627, "Aug": 49296, "Sep": 43360.8}
+    Barsha_2025_orders = {"Jan": 1726, "Feb": 1527, "Mar": 1427, "Apr": 1816, "May": 881, "Jun": 891, "Jul": 1007, "Aug": 901, "Sep": 879}
+    Barsha_2025_online_orders = {"Jan": 156, "Feb": 178, "Mar": 98, "Apr": 181, "May": 176, "Jun": 161, "Jul": 173, "Aug": 159, "Sep": 167}
+    Barsha_2025_online_sales = {"Jan": 8325, "Feb": 8977, "Mar": 4816, "Apr": 9647, "May": 9039, "Jun": 7877, "Jul": 8453, "Aug": 7404, "Sep": 8489.9}
+    
+    Barsha_2024_sales = {"Jan": 30120, "Feb": 33556, "Mar": 30722, "Apr": 40737, "May": 50460, "Jun": 48778, "Jul": 56252, "Aug": 54008, "Sep": 54921}
+    Barsha_2024_orders = {"Jan": 802, "Feb": 928, "Mar": 928, "Apr": 1173, "May": 1487, "Jun": 1488, "Jul": 1740, "Aug": 1813, "Sep": 1749}
+    Barsha_2024_online_orders = {"Jan": 365, "Feb": 304, "Mar": 243, "Apr": 221, "May": 290, "Jun": 299, "Jul": 276, "Aug": 250, "Sep": 203}
+    Barsha_2024_online_sales = {"Jan": 19348, "Feb": 16597, "Mar": 14043, "Apr": 12546, "May": 16921, "Jun": 17351, "Jul": 14681, "Aug": 13840, "Sep": 12385}
+    
+    # Satwa data
+    Satwa_2025_sales = {"Jan": 26849, "Feb": 24349, "Mar": 21934, "Apr": 29154, "May": 20631, "Jun": 21005, "Jul": 24685, "Aug": 22476, "Sep": 23066}
+    Satwa_2025_orders = {"Jan": 818, "Feb": 719, "Mar": 645, "Apr": 881, "May": 506, "Jun": 463, "Jul": 528, "Aug": 492, "Sep": 495}
+    Satwa_2025_online_orders = {"Jan": 210, "Feb": 240, "Mar": 134, "Apr": 283, "May": 348, "Jun": 343, "Jul": 484, "Aug": 387, "Sep": 376}
+    Satwa_2025_online_sales = {"Jan": 7572, "Feb": 9979, "Mar": 5832, "Apr": 11509, "May": 13388, "Jun": 13815, "Jul": 18083, "Aug": 14903, "Sep": 15232}
+    
+    Satwa_2024_sales = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 22337, "Jun": 26665, "Jul": 27671, "Aug": 34732, "Sep": 27068}
+    Satwa_2024_orders = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 555, "Jun": 684, "Jul": 795, "Aug": 965, "Sep": 799}
+    Satwa_2024_online_orders = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 15, "Jun": 148, "Jul": 234, "Aug": 299, "Sep": 177}
+    Satwa_2024_online_sales = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 569, "Jun": 6303, "Jul": 9685, "Aug": 11818, "Sep": 8026}
+    
+    # Al Rigga data
+    Al_Rigga_2025_sales = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 0, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 1993}
+    Al_Rigga_2025_orders = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 0, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 45}
+    Al_Rigga_2025_online_orders = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 0, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 0}
+    Al_Rigga_2025_online_sales = {"Jan": 0, "Feb": 0, "Mar": 0, "Apr": 0, "May": 0, "Jun": 0, "Jul": 0, "Aug": 0, "Sep": 0}
+    
+    Al_Rigga_2024_sales = {}
+    Al_Rigga_2024_orders = {}
+    Al_Rigga_2024_online_orders = {}
+    Al_Rigga_2024_online_sales = {}
+    
+    return {
+        "Hamdan_2025_sales": Hamdan_2025_sales,
+        "Hamdan_2025_orders": Hamdan_2025_orders,
+        "Hamdan_2025_online_orders": Hamdan_2025_online_orders,
+        "Hamdan_2025_online_sales": Hamdan_2025_online_sales,
+        "Hamdan_2024_sales": Hamdan_2024_sales,
+        "Hamdan_2024_orders": Hamdan_2024_orders,
+        "Hamdan_2024_online_orders": Hamdan_2024_online_orders,
+        "Hamdan_2024_online_sales": Hamdan_2024_online_sales,
+        "Khalidiya_2025_sales": Khalidiya_2025_sales,
+        "Khalidiya_2025_orders": Khalidiya_2025_orders,
+        "Khalidiya_2025_online_orders": Khalidiya_2025_online_orders,
+        "Khalidiya_2025_online_sales": Khalidiya_2025_online_sales,
+        "Khalidiya_2024_sales": Khalidiya_2024_sales,
+        "Khalidiya_2024_orders": Khalidiya_2024_orders,
+        "Khalidiya_2024_online_orders": Khalidiya_2024_online_orders,
+        "Khalidiya_2024_online_sales": Khalidiya_2024_online_sales,
+        "Shabiya_2025_sales": Shabiya_2025_sales,
+        "Shabiya_2025_orders": Shabiya_2025_orders,
+        "Shabiya_2025_online_orders": Shabiya_2025_online_orders,
+        "Shabiya_2025_online_sales": Shabiya_2025_online_sales,
+        "Shabiya_2024_sales": Shabiya_2024_sales,
+        "Shabiya_2024_orders": Shabiya_2024_orders,
+        "Shabiya_2024_online_orders": Shabiya_2024_online_orders,
+        "Shabiya_2024_online_sales": Shabiya_2024_online_sales,
+        "Muroor_2025_sales": Muroor_2025_sales,
+        "Muroor_2025_orders": Muroor_2025_orders,
+        "Muroor_2025_online_orders": Muroor_2025_online_orders,
+        "Muroor_2025_online_sales": Muroor_2025_online_sales,
+        "Muroor_2024_sales": Muroor_2024_sales,
+        "Muroor_2024_orders": Muroor_2024_orders,
+        "Muroor_2024_online_orders": Muroor_2024_online_orders,
+        "Muroor_2024_online_sales": Muroor_2024_online_sales,
+        "Electra_2025_sales": Electra_2025_sales,
+        "Electra_2025_orders": Electra_2025_orders,
+        "Electra_2025_online_orders": Electra_2025_online_orders,
+        "Electra_2025_online_sales": Electra_2025_online_sales,
+        "Electra_2024_sales": Electra_2024_sales,
+        "Electra_2024_orders": Electra_2024_orders,
+        "Electra_2024_online_orders": Electra_2024_online_orders,
+        "Electra_2024_online_sales": Electra_2024_online_sales,
+        "Barsha_2025_sales": Barsha_2025_sales,
+        "Barsha_2025_orders": Barsha_2025_orders,
+        "Barsha_2025_online_orders": Barsha_2025_online_orders,
+        "Barsha_2025_online_sales": Barsha_2025_online_sales,
+        "Barsha_2024_sales": Barsha_2024_sales,
+        "Barsha_2024_orders": Barsha_2024_orders,
+        "Barsha_2024_online_orders": Barsha_2024_online_orders,
+        "Barsha_2024_online_sales": Barsha_2024_online_sales,
+        "Satwa_2025_sales": Satwa_2025_sales,
+        "Satwa_2025_orders": Satwa_2025_orders,
+        "Satwa_2025_online_orders": Satwa_2025_online_orders,
+        "Satwa_2025_online_sales": Satwa_2025_online_sales,
+        "Satwa_2024_sales": Satwa_2024_sales,
+        "Satwa_2024_orders": Satwa_2024_orders,
+        "Satwa_2024_online_orders": Satwa_2024_online_orders,
+        "Satwa_2024_online_sales": Satwa_2024_online_sales,
+        "Al_Rigga_2025_sales": Al_Rigga_2025_sales,
+        "Al_Rigga_2025_orders": Al_Rigga_2025_orders,
+        "Al_Rigga_2025_online_orders": Al_Rigga_2025_online_orders,
+        "Al_Rigga_2025_online_sales": Al_Rigga_2025_online_sales,
+        "Al_Rigga_2024_sales": Al_Rigga_2024_sales,
+        "Al_Rigga_2024_orders": Al_Rigga_2024_orders,
+        "Al_Rigga_2024_online_orders": Al_Rigga_2024_online_orders,
+        "Al_Rigga_2024_online_sales": Al_Rigga_2024_online_sales,
+    }
+
+def process_data():
+    """Process extracted data into structured format"""
+    branches = ["Hamdan", "Khalidiya", "Shabiya", "Muroor", "Electra", "Barsha", "Satwa", "Al Rigga"]
+    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    
+    data = {
+        'branches': branches,
+        'branchNames': {
+            "Hamdan": "Crispy Chicken - Hamdan",
+            "Khalidiya": "Crispy Chicken - Khalidiya",
+            "Shabiya": "Crispy Chicken - Shabiya",
+            "Muroor": "Crispy Chicken - Muroor",
+            "Electra": "Crispy Chicken - Electra",
+            "Barsha": "Crispy Chicken - Barsha",
+            "Satwa": "Crispy Chicken - Satwa",
+            "Al Rigga": "Crispy Chicken - Al Rigga"
+        },
+        'months': months,
+        'monthNames': {month: month for month in months},
+        'data2024': {
+            'sales': {},
+            'orders': {},
+            'online_orders': {},
+            'online_sales': {}
+        },
+        'data2025': {
+            'sales': {},
+            'orders': {},
+            'online_orders': {},
+            'online_sales': {}
+        }
+    }
+    
+    # Process each branch
+    for branch in branches:
+        # 2024 data
+        data['data2024']['sales'][branch] = []
+        data['data2024']['orders'][branch] = []
+        data['data2024']['online_orders'][branch] = []
+        data['data2024']['online_sales'][branch] = []
+        
+        # 2025 data
+        data['data2025']['sales'][branch] = []
+        data['data2025']['orders'][branch] = []
+        data['data2025']['online_orders'][branch] = []
+        data['data2025']['online_sales'][branch] = []
+        
+        # Process each month
+        for month in data['months']:
+            # 2024 data
+            sales_2024 = globals().get(f"{branch}_2024_sales", {}).get(month, 0)
+            orders_2024 = globals().get(f"{branch}_2024_orders", {}).get(month, 0)
+            online_orders_2024 = globals().get(f"{branch}_2024_online_orders", {}).get(month, 0)
+            online_sales_2024 = globals().get(f"{branch}_2024_online_sales", {}).get(month, 0)
+            
+            data['data2024']['sales'][branch].append(sales_2024)
+            data['data2024']['orders'][branch].append(orders_2024)
+            data['data2024']['online_orders'][branch].append(online_orders_2024)
+            data['data2024']['online_sales'][branch].append(online_sales_2024)
+            
+            # 2025 data
+            sales_2025 = globals().get(f"{branch}_2025_sales", {}).get(month, 0)
+            orders_2025 = globals().get(f"{branch}_2025_orders", {}).get(month, 0)
+            online_orders_2025 = globals().get(f"{branch}_2025_online_orders", {}).get(month, 0)
+            online_sales_2025 = globals().get(f"{branch}_2025_online_sales", {}).get(month, 0)
+            
+            data['data2025']['sales'][branch].append(sales_2025)
+            data['data2025']['orders'][branch].append(orders_2025)
+            data['data2025']['online_orders'][branch].append(online_orders_2025)
+            data['data2025']['online_sales'][branch].append(online_sales_2025)
+    
+    return data
+
+# --------------------------
+# --- DASHBOARD GENERATION ---
+# --------------------------
+
+def generate_dashboard_html(output_file="Crispy_Chicken_Dashboard.html"):
+    """Generate the complete dashboard HTML file"""
+    # Extract and process data
+    raw_data = extract_data()
+    dashboard_data = process_data()
+    
+    # Calculate key metrics
+    def calculate_year_metrics(year):
+        total_sales = 0
+        total_orders = 0
+        total_online_sales = 0
+        total_online_orders = 0
+        
+        for branch in dashboard_data['branches']:
+            # Sum all months
+            total_sales += sum(dashboard_data[f'data{year}']['sales'][branch])
+            total_orders += sum(dashboard_data[f'data{year}']['orders'][branch])
+            total_online_sales += sum(dashboard_data[f'data{year}']['online_sales'][branch])
+            total_online_orders += sum(dashboard_data[f'data{year}']['online_orders'][branch])
+        
+        avg_order_value = total_sales / total_orders if total_orders > 0 else 0
+        online_percentage = (total_online_sales / total_sales) * 100 if total_sales > 0 else 0
+        
+        return {
+            "totalSales": total_sales,
+            "totalOrders": total_orders,
+            "averageOrderValue": avg_order_value,
+            "totalOnlineSales": total_online_sales,
+            "totalOnlineOrders": total_online_orders,
+            "onlinePercentage": online_percentage
+        }
+    
+    metrics2024 = calculate_year_metrics(2024)
+    metrics2025 = calculate_year_metrics(2025)
+    growth_rate = ((metrics2025['totalSales'] - metrics2024['totalSales']) / metrics2024['totalSales']) * 100
+    
+    # Calculate branch-specific metrics
+    branch_metrics = {}
+    for branch in dashboard_data['branches']:
+        sales2024 = sum(dashboard_data['data2024']['sales'][branch])
+        sales2025 = sum(dashboard_data['data2025']['sales'][branch])
+        online2024 = sum(dashboard_data['data2024']['online_sales'][branch])
+        online2025 = sum(dashboard_data['data2025']['online_sales'][branch])
+        growth = ((sales2025 - sales2024) / sales2024 * 100) if sales2024 > 0 else 0
+        
+        branch_metrics[branch] = {
+            'sales2024': sales2024,
+            'sales2025': sales2025,
+            'online2024': online2024,
+            'online2025': online2025,
+            'growth': growth
+        }
+    
+    # Create HTML template
+    html_template = """
 <!DOCTYPE html>
-<html lang='en'>
+<html lang="en">
 <head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <title>Crispy Chicken 2024-2025 Dashboard</title>
-    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
-    <link href='https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap' rel='stylesheet'>
-    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Crispy Chicken Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
+        :root {
+            --primary-color: #e74c3c;
+            --secondary-color: #f39c12;
+            --success-color: #27ae60;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --danger-color: #c0392b;
+            --warning-color: #d68910;
+            --online-color: #3498db;
+            --year2024-color: #e74c3c;
+            --year2025-color: #3498db;
+        }
+        
+        * {
             margin: 0;
             padding: 0;
-            background-color: #f5f7fa;
-            color: #333;
+            box-sizing: border-box;
         }
-        .header {
-            background-color: #D9534F;
-            color: white;
-            padding: 20px 0;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f8f9fa;
+            color: var(--dark-color);
+            line-height: 1.6;
         }
-        .header h1 {
-            margin: 0;
-            font-size: 2.5rem;
-            font-weight: 700;
-        }
-        .header p {
-            margin: 5px 0 0;
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
+        
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             padding: 20px;
         }
-        .sidebar {
-            width: 250px;
-            background-color: #343a40;
-            position: fixed;
-            height: 100%;
-            overflow-y: auto;
-            padding-top: 20px;
-            z-index: 1000;
+        
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--danger-color));
+            color: white;
+            padding: 30px 0;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        .sidebar a {
+        
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="%23ffffff20" fill-opacity="1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,144C960,149,1056,139,1152,128C1248,117,1344,107,1392,101.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+            background-size: cover;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-top: 10px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .year-selector {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px auto;
+            max-width: 1000px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        .year-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .year-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .year-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .year-btn.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 30px;
+        }
+        
+        .sidebar {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .sidebar h2 {
+            margin-bottom: 25px;
+            color: var(--dark-color);
+            font-size: 1.5rem;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 12px;
+        }
+        
+        .menu-item {
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+        
+        .menu-item:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateX(8px);
+        }
+        
+        .menu-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .menu-item i {
+            font-size: 1.3rem;
+            width: 24px;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 15px;
+            padding: 35px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
             display: block;
-            padding: 12px 20px;
-            color: #f8f9fa;
-            text-decoration: none;
-            font-size: 1rem;
-            border-left: 3px solid transparent;
+        }
+        
+        .section h2 {
+            color: var(--dark-color);
+            margin-bottom: 30px;
+            font-size: 2rem;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 15px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #fff, #f8f9fa);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-left: 5px solid;
+        }
+        
+        .stat-card.year2024 {
+            border-color: var(--year2024-color);
+        }
+        
+        .stat-card.year2025 {
+            border-color: var(--year2025-color);
+        }
+        
+        .stat-card.total {
+            border-color: var(--success-color);
+        }
+        
+        .stat-card h3 {
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .stat-card.year2024 .stat-value {
+            color: var(--year2024-color);
+        }
+        
+        .stat-card.year2025 .stat-value {
+            color: var(--year2025-color);
+        }
+        
+        .stat-card.total .stat-value {
+            color: var(--success-color);
+        }
+        
+        .stat-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .stat-label {
+            color: #666;
+        }
+        
+        .stat-amount {
+            font-weight: 500;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .chart-container h3 {
+            margin-bottom: 20px;
+            color: var(--dark-color);
+            font-size: 1.4rem;
+            border-bottom: 2px solid var(--light-color);
+            padding-bottom: 10px;
+        }
+        
+        .outlet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .outlet-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            border-top: 5px solid;
+            position: relative;
             transition: all 0.3s ease;
         }
-        .sidebar a:hover, .sidebar a.active {
-            background-color: #495057;
-            border-left-color: #D9534F;
+        
+        .outlet-card.year2024 {
+            border-color: var(--year2024-color);
         }
-        .sidebar i {
-            margin-right: 10px;
-            width: 20px;
-            text-align: center;
+        
+        .outlet-card.year2025 {
+            border-color: var(--year2025-color);
         }
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-        }
-        .section {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            padding: 25px;
-            margin-bottom: 30px;
-        }
-        .section h2 {
-            color: #D9534F;
-            margin-top: 0;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-            gap: 20px;
-        }
-        .card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            padding: 20px;
-            transition: transform 0.3s ease;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        .table-container {
-            overflow-x: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #e1e1e1;
-        }
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-            color: #555;
-        }
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        .metric {
-            display: inline-block;
-            padding: 15px 25px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            margin: 10px 15px 10px 0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .metric-value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #D9534F;
-        }
-        .metric-label {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 5px;
-        }
-        .footer {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 30px;
-        }
-        .filter-container {
+        
+        .outlet-card h3 {
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            color: var(--dark-color);
             display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .outlet-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
             margin-bottom: 20px;
         }
-        .filter-container select {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        
+        .outlet-stat {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .outlet-stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .outlet-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .outlet-card.year2024 .outlet-stat-value {
+            color: var(--year2024-color);
+        }
+        
+        .outlet-card.year2025 .outlet-stat-value {
+            color: var(--year2025-color);
+        }
+        
+        .comparison-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .comparison-badge.positive {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+        }
+        
+        .comparison-badge.negative {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .comparison-badge.neutral {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: var(--warning-color);
+        }
+        
+        .delivery-trends-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .delivery-trends-table th {
+            background: linear-gradient(135deg, var(--primary-color), var(--danger-color));
+            color: white;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 500;
             font-size: 1rem;
-            background-color: white;
         }
-        .chart-container {
+        
+        .delivery-trends-table td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .delivery-trends-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .delivery-trends-table tr:hover {
+            background-color: #fff5f5;
+            transition: background-color 0.2s ease;
+        }
+        
+        .branch-name {
+            font-weight: 500;
+        }
+        
+        .trend-cell {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .trend-up {
+            color: var(--success-color);
+        }
+        
+        .trend-down {
+            color: var(--danger-color);
+        }
+        
+        .trend-neutral {
+            color: var(--warning-color);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        
+        .insight-box {
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+            border-left: 5px solid var(--success-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 25px 0;
             position: relative;
-            height: 400px;
-            margin: 20px 0;
         }
-        .hidden {
-            display: none;
+        
+        .insight-box h4 {
+            color: var(--success-color);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
         }
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
+        
+        .insight-box p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .insight-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .insight-card h4 {
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .insight-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .insight-metric {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .insight-metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        
+        .insight-metric-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .alert {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid;
+        }
+        
+        .alert-success {
+            background-color: rgba(39, 174, 96, 0.1);
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+        
+        .alert-info {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-color: var(--online-color);
+            color: var(--online-color);
+        }
+        
+        .real-time-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--success-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .real-time-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0.7);
             }
-            .main-content {
-                margin-left: 0;
+            70% {
+                box-shadow: 0 0 0 10px rgba(39, 174, 96, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(39, 174, 96, 0);
+            }
+        }
+        
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: static;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .year-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .year-btn {
+                width: 100%;
+                max-width: 300px;
             }
         }
     </style>
 </head>
 <body>
-    <div class='sidebar'>
-        <a href='#overview'><i class='fas fa-chart-pie'></i> Overview</a>
-        <a href='#delivery-online'><i class='fas fa-shipping-fast'></i> Delivery vs Online</a>
-        <a href='#platforms'><i class='fas fa-mobile-alt'></i> Platforms</a>
-        <a href='#monthly-trends' class='active'><i class='fas fa-calendar-alt'></i> Monthly Trends</a>
-        <a href='#payment-trends'><i class='fas fa-credit-card'></i> Payment Trends</a>
-    </div>
-    <div class='main-content'>
-        <div class='header'>
-            <h1>Crispy Chicken Performance Dashboard</h1>
-            <p>2024-2025 Financial Analysis</p>
-        </div>
-        <div class='container'>
-            <div class='section' id='overview'>
-                <h2>Key Performance Metrics</h2>
-                <div class='metric'>
-                    <div class='metric-value'>$4,892,010.72</div>
-                    <div class='metric-label'>2024 Total Revenue</div>
-                </div>
-                <div class='metric'>
-                    <div class='metric-value'>$4,016,650.00</div>
-                    <div class='metric-label'>2025 Total Revenue</div>
-                </div>
-                <div class='metric'>
-                    <div class='metric-value'>-17.9%</div>
-                    <div class='metric-label'>YoY Growth</div>
-                </div>
+    <div class="container">
+        <header>
+            <div class="real-time-indicator">
+                <div class="real-time-dot"></div>
+                <span>Real-time Updates</span>
             </div>
-            
-            <div class='section' id='delivery-online'>
-                <h2>2024 Delivery vs Online Revenue</h2>
-                <div class='grid'>
-                    <div class='card'>
-                        <div>
-                            <div id="plotly-delivery-2024"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class='section' id='delivery-online'>
-                <h2>2025 Delivery vs Online Revenue</h2>
-                <div class='grid'>
-                    <div class='card'>
-                        <div>
-                            <div id="plotly-delivery-2025"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class='section' id='platforms'>
-                <h2>2024 Platform Revenue</h2>
-                <div class='grid'>
-                    <div class='card'>
-                        <div>
-                            <div id="plotly-platform-2024"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class='section' id='platforms'>
-                <h2>2025 Platform Revenue</h2>
-                <div class='grid'>
-                    <div class='card'>
-                        <div>
-                            <div id="plotly-platform-2025"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class='section' id='monthly-trends'>
-                <h2>Monthly Sales Trends</h2>
-                <div class='filter-container'>
-                    <select id='year-filter'>
-                        <option value='both'>Compare Both Years</option>
-                        <option value='2024'>2024</option>
-                        <option value='2025'>2025</option>
-                    </select>
-                    <select id='branch-filter'>
-                        <option value='all'>All Branches</option>
-                        <option value='Al Rigga'>Al Rigga</option>
-                        <option value='Al Barsha'>Al Barsha</option>
-                        <option value='Hamdan'>Hamdan</option>
-                        <option value='Khalidiya'>Khalidiya</option>
-                        <option value='Muroor'>Muroor</option>
-                        <option value='Satwa'>Satwa</option>
-                        <option value='Shabiya'>Shabiya</option>
-                        <option value='Electra'>Electra</option>
-                    </select>
-                </div>
-                <div class='grid'>
-                    <div class='card'>
-                        <h3>Monthly Sales Comparison</h3>
-                        <div class='chart-container'>
-                            <canvas id='monthly-sales-chart'></canvas>
-                        </div>
-                    </div>
-                    <div class='card'>
-                        <h3>Monthly Transaction Volume</h3>
-                        <div class='chart-container'>
-                            <canvas id='monthly-transactions-chart'></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class='section' id='payment-trends'>
-                <h2>Payment Method Trends</h2>
-                <div class='grid'>
-                    <div class='card'>
-                        <div>
-                            <div id="plotly-payment-revenue"></div>
-                        </div>
-                    </div>
-                    <div class='card'>
-                        <div>
-                            <div id="plotly-payment-transactions"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class='footer'>
-            <p>Generated on 2023-10-15 14:30:45</p>
-            <p>© 2025 Crispy Chicken Analytics Dashboard</p>
-        </div>
-    </div>
-    
-    <script>
-        // Monthly data for charts
-        const monthlyData = {
-            2024: {
-                'All Outlets': {
-                    sales: [326134, 407667, 407667, 407667, 407667, 489201, 489201, 489201, 407667, 407667, 407667, 326134],
-                    transactions: [11500, 14375, 14375, 14375, 14375, 17250, 17250, 17250, 14375, 14375, 14375, 11500]
-                },
-                'Al Rigga': {
-                    sales: [5583, 6979, 6979, 6979, 6979, 8375, 8375, 8375, 6979, 6979, 6979, 5583],
-                    transactions: [270, 338, 338, 338, 338, 406, 406, 406, 338, 338, 338, 270]
-                },
-                'Al Barsha': {
-                    sales: [46100, 57625, 57625, 57625, 57625, 69150, 69150, 69150, 57625, 57625, 57625, 46100],
-                    transactions: [1740, 2175, 2175, 2175, 2175, 2610, 2610, 2610, 2175, 2175, 2175, 1740]
-                },
-                'Hamdan': {
-                    sales: [52875, 66094, 66094, 66094, 66094, 79313, 79313, 79313, 66094, 66094, 66094, 52875],
-                    transactions: [1800, 2250, 2250, 2250, 2250, 2700, 2700, 2700, 2250, 2250, 2250, 1800]
-                },
-                'Khalidiya': {
-                    sales: [41875, 52344, 52344, 52344, 52344, 62813, 62813, 62813, 52344, 52344, 52344, 41875],
-                    transactions: [1400, 1750, 1750, 1750, 1750, 2100, 2100, 2100, 1750, 1750, 1750, 1400]
-                },
-                'Muroor': {
-                    sales: [36250, 45313, 45313, 45313, 45313, 54375, 54375, 54375, 45313, 45313, 45313, 36250],
-                    transactions: [1200, 1500, 1500, 1500, 1500, 1800, 1800, 1800, 1500, 1500, 1500, 1200]
-                },
-                'Satwa': {
-                    sales: [40875, 51094, 51094, 51094, 51094, 61313, 61313, 61313, 51094, 51094, 51094, 40875],
-                    transactions: [1420, 1775, 1775, 1775, 1775, 2130, 2130, 2130, 1775, 1775, 1775, 1420]
-                },
-                'Shabiya': {
-                    sales: [49063, 61329, 61329, 61329, 61329, 73595, 73595, 73595, 61329, 61329, 61329, 49063],
-                    transactions: [1580, 1975, 1975, 1975, 1975, 2370, 2370, 2370, 1975, 1975, 1975, 1580]
-                },
-                'Electra': {
-                    sales: [53375, 66719, 66719, 66719, 66719, 80063, 80063, 80063, 66719, 66719, 66719, 53375],
-                    transactions: [2060, 2575, 2575, 2575, 2575, 3090, 3090, 3090, 2575, 2575, 2575, 2060]
-                }
-            },
-            2025: {
-                'All Outlets': {
-                    sales: [268110, 335138, 335138, 335138, 335138, 402166, 402166, 402166, 335138, 0, 0, 0],
-                    transactions: [9435, 11794, 11794, 11794, 11794, 14153, 14153, 14153, 11794, 0, 0, 0]
-                },
-                'Al Rigga': {
-                    sales: [4590, 5738, 5738, 5738, 5738, 6886, 6886, 6886, 5738, 0, 0, 0],
-                    transactions: [222, 278, 278, 278, 278, 334, 334, 334, 278, 0, 0, 0]
-                },
-                'Al Barsha': {
-                    sales: [37880, 47350, 47350, 47350, 47350, 56820, 56820, 56820, 47350, 0, 0, 0],
-                    transactions: [1430, 1788, 1788, 1788, 1788, 2146, 2146, 2146, 1788, 0, 0, 0]
-                },
-                'Hamdan': {
-                    sales: [43488, 54360, 54360, 54360, 54360, 65232, 65232, 65232, 54360, 0, 0, 0],
-                    transactions: [1480, 1850, 1850, 1850, 1850, 2220, 2220, 2220, 1850, 0, 0, 0]
-                },
-                'Khalidiya': {
-                    sales: [34438, 43048, 43048, 43048, 43048, 51658, 51658, 51658, 43048, 0, 0, 0],
-                    transactions: [1152, 1440, 1440, 1440, 1440, 1728, 1728, 1728, 1440, 0, 0, 0]
-                },
-                'Muroor': {
-                    sales: [29813, 37266, 37266, 37266, 37266, 44719, 44719, 44719, 37266, 0, 0, 0],
-                    transactions: [988, 1235, 1235, 1235, 1235, 1482, 1482, 1482, 1235, 0, 0, 0]
-                },
-                'Satwa': {
-                    sales: [33660, 42075, 42075, 42075, 42075, 50490, 50490, 50490, 42075, 0, 0, 0],
-                    transactions: [1168, 1460, 1460, 1460, 1460, 1752, 1752, 1752, 1460, 0, 0, 0]
-                },
-                'Shabiya': {
-                    sales: [40388, 50485, 50485, 50485, 50485, 60582, 60582, 60582, 50485, 0, 0, 0],
-                    transactions: [1300, 1625, 1625, 1625, 1625, 1950, 1950, 1950, 1625, 0, 0, 0]
-                },
-                'Electra': {
-                    sales: [43938, 54923, 54923, 54923, 54923, 65908, 65908, 65908, 54923, 0, 0, 0],
-                    transactions: [1696, 2120, 2120, 2120, 2120, 2544, 2544, 2544, 2120, 0, 0, 0]
-                }
-            }
-        };
+            <h1><i class="fas fa-chart-line"></i> Crispy Chicken Dashboard</h1>
+            <div class="subtitle">Interactive Comparison Between 2024 and 2025 Performance</div>
+        </header>
 
-        // Chart configuration
-        const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        <div class="year-selector">
+            <h3>Select Year for Analysis</h3>
+            <div class="year-buttons">
+                <button class="year-btn year2024 active" data-year="2024">
+                    <i class="fas fa-calendar-alt"></i> 2024
+                </button>
+                <button class="year-btn year2025" data-year="2025">
+                    <i class="fas fa-calendar-plus"></i> 2025
+                </button>
+                <button class="year-btn" data-year="comparison" style="background: var(--success-color); border-color: var(--success-color);">
+                    <i class="fas fa-balance-scale"></i> Compare Both Years
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <aside class="sidebar">
+                <h2><i class="fas fa-bars"></i> Navigation</h2>
+                <div class="menu-item active" data-section="overview">
+                    <i class="fas fa-tachometer-alt"></i> <span>Overview</span>
+                </div>
+                <div class="menu-item" data-section="branch-analysis">
+                    <i class="fas fa-store"></i> <span>Branch Analysis</span>
+                </div>
+                <div class="menu-item" data-section="delivery-trends">
+                    <i class="fas fa-truck"></i> <span>Delivery Trends</span>
+                </div>
+                <div class="menu-item" data-section="monthly-comparison">
+                    <i class="fas fa-calendar-alt"></i> <span>Monthly Trends</span>
+                </div>
+                <div class="menu-item" data-section="insights">
+                    <i class="fas fa-lightbulb"></i> <span>Key Insights</span>
+                </div>
+            </aside>
+
+            <main class="content">
+                <!-- Overview Section -->
+                <section id="overview" class="section active">
+                    <h2><i class="fas fa-chart-pie"></i> Performance Overview</h2>
+                    
+                    <div class="alert alert-success">
+                        <h3><i class="fas fa-check-circle"></i> Network Performance Summary</h3>
+                        <p>Compare total sales and performance metrics between 2024 and 2025 across all branches.</p>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card year2024">
+                            <h3><i class="fas fa-chart-line"></i> 2024 Performance</h3>
+                            <div class="stat-value">${metrics2024['totalSales']:,}</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Total Transactions:</span>
+                                <span class="stat-amount">{metrics2024['totalOrders']:,}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Online Sales:</span>
+                                <span class="stat-amount">${metrics2024['totalOnlineSales']:,}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Average Value:</span>
+                                <span class="stat-amount">${metrics2024['averageOrderValue']:.2f}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Online Share:</span>
+                                <span class="stat-amount">{metrics2024['onlinePercentage']:.1f}%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card year2025">
+                            <h3><i class="fas fa-chart-line"></i> 2025 Performance</h3>
+                            <div class="stat-value">${metrics2025['totalSales']:,}</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Total Transactions:</span>
+                                <span class="stat-amount">{metrics2025['totalOrders']:,}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Online Sales:</span>
+                                <span class="stat-amount">${metrics2025['totalOnlineSales']:,}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Average Value:</span>
+                                <span class="stat-amount">${metrics2025['averageOrderValue']:.2f}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Online Share:</span>
+                                <span class="stat-amount">{metrics2025['onlinePercentage']:.1f}%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card total">
+                            <h3><i class="fas fa-balance-scale"></i> Comparison Summary</h3>
+                            <div class="stat-value">{growth_rate:.1f}%</div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Sales Growth:</span>
+                                <span class="stat-amount">${metrics2025['totalSales'] - metrics2024['totalSales']:,}</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Transaction Change:</span>
+                                <span class="stat-amount">{((metrics2025['totalOrders'] - metrics2024['totalOrders']) / metrics2024['totalOrders'] * 100):.1f}%</span>
+                            </div>
+                            <div class="stat-detail">
+                                <span class="stat-label">Data Status:</span>
+                                <span class="stat-amount">2025 partial data (Jan-Sep)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-bar"></i> Year-over-Year Comparison</h3>
+                        <canvas id="year-overview-chart"></canvas>
+                    </div>
+
+                    <div class="insight-box">
+                        <h4><i class="fas fa-lightbulb"></i> Key Insight</h4>
+                        <p>{'Sales increased by ' + str(growth_rate) + '% in 2025 compared to 2024. Online sales share decreased from ' + str(metrics2024['onlinePercentage']) + '% to ' + str(metrics2025['onlinePercentage']) + '%.' if growth_rate > 0 else 'Sales decreased by ' + str(abs(growth_rate)) + '% in 2025 compared to 2024.'}</p>
+                    </div>
+                </section>
+
+                <!-- Branch Analysis Section -->
+                <section id="branch-analysis" class="section">
+                    <h2><i class="fas fa-store"></i> Branch Performance Analysis</h2>
+                    
+                    <div class="outlet-grid" id="outlet-grid">
+                        <!-- Outlet cards will be populated by JavaScript -->
+                    </div>
+
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-bar"></i> Branch Sales Comparison</h3>
+                        <canvas id="branch-comparison-chart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Delivery Trends Section -->
+                <section id="delivery-trends" class="section">
+                    <h2><i class="fas fa-truck"></i> Branch Delivery Trends</h2>
+                    
+                    <div class="alert alert-info">
+                        <h3><i class="fas fa-info-circle"></i> Online Performance Analysis</h3>
+                        <p>Compare online (delivery) counts and amounts between 2024 and 2025 for all branches.</p>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3><i class="fas fa-table"></i> Online Orders Comparison</h3>
+                        <div class="table-container">
+                            <table class="delivery-trends-table">
+                                <thead>
+                                    <tr>
+                                        <th>Branch</th>
+                                        <th colspan="3">January</th>
+                                        <th colspan="3">February</th>
+                                        <th colspan="3">March</th>
+                                        <th colspan="3">April</th>
+                                        <th colspan="3">May</th>
+                                        <th colspan="3">June</th>
+                                        <th colspan="3">July</th>
+                                        <th colspan="3">August</th>
+                                        <th colspan="3">September</th>
+                                    </tr>
+                                    <tr>
+                                        <th></th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                        <th>2024</th>
+                                        <th>2025</th>
+                                        <th>Change</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="delivery-counts-tbody">
+                                    <!-- Table rows will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Monthly Trends Section -->
+                <section id="monthly-comparison" class="section">
+                    <h2><i class="fas fa-calendar-alt"></i> Monthly Performance Trends</h2>
+                    
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-line"></i> Monthly Sales Comparison</h3>
+                        <canvas id="monthly-sales-chart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-bar"></i> Monthly Transaction Volume</h3>
+                        <canvas id="monthly-transactions-chart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Insights Section -->
+                <section id="insights" class="section">
+                    <h2><i class="fas fa-lightbulb"></i> Key Insights & Analysis</h2>
+                    
+                    <div class="alert alert-success">
+                        <h3><i class="fas fa-chart-line"></i> Performance Insights</h3>
+                        <p>Comprehensive analysis of business performance between 2024 and 2025.</p>
+                    </div>
+
+                    <div class="insights-grid">
+                        <div class="insight-card">
+                            <h4><i class="fas fa-trophy"></i> Top Performing Branch (2024)</h4>
+                            <p>Khalidiya branch led with ${sum(dashboard_data['data2024']['sales']['Khalidiya']):,} in sales.</p>
+                            <div class="insight-metric">
+                                <div class="insight-metric-value">${sum(dashboard_data['data2024']['sales']['Khalidiya']):,}</div>
+                                <div class="insight-metric-label">Total Sales</div>
+                            </div>
+                        </div>
+
+                        <div class="insight-card">
+                            <h4><i class="fas fa-chart-line"></i> Sales Trend Analysis</h4>
+                            <p>Average order value increased by {((metrics2025['averageOrderValue'] - metrics2024['averageOrderValue']) / metrics2024['averageOrderValue'] * 100):.1f}%.</p>
+                            <div class="insight-metric">
+                                <div class="insight-metric-value">{((metrics2025['averageOrderValue'] - metrics2024['averageOrderValue']) / metrics2024['averageOrderValue'] * 100):.1f}%</div>
+                                <div class="insight-metric-label">Avg Value Change</div>
+                            </div>
+                        </div>
+
+                        <div class="insight-card">
+                            <h4><i class="fas fa-mobile-alt"></i> Channel Performance</h4>
+                            <p>Online channel market share decreased from {metrics2024['onlinePercentage']:.1f}% to {metrics2025['onlinePercentage']:.1f}%.</p>
+                            <div class="insight-metric">
+                                <div class="insight-metric-value">{((metrics2025['onlinePercentage'] - metrics2024['onlinePercentage']) / metrics2024['onlinePercentage'] * 100):.1f}%</div>
+                                <div class="insight-metric-label">Online Channel Change</div>
+                            </div>
+                        </div>
+
+                        <div class="insight-card">
+                            <h4><i class="fas fa-calendar-alt"></i> Seasonal Patterns</h4>
+                            <p>Summer months (June-August) account for {(sum(sum(dashboard_data['data2024']['sales'][branch][5:8]) for branch in dashboard_data['branches']) / sum(sum(dashboard_data['data2024']['sales'][branch]) for branch in dashboard_data['branches']) * 100):.1f}% of total sales.</p>
+                            <div class="insight-metric">
+                                <div class="insight-metric-value">{(sum(sum(dashboard_data['data2024']['sales'][branch][5:8]) for branch in dashboard_data['branches']) / sum(sum(dashboard_data['data2024']['sales'][branch]) for branch in dashboard_data['branches']) * 100):.1f}%</div>
+                                <div class="insight-metric-label">Summer Sales Share</div>
+                            </div>
+                        </div>
+
+                        <div class="insight-card">
+                            <h4><i class="fas fa-bullseye"></i> Growth Opportunities</h4>
+                            <p>Potential to increase order volume by {metrics2024['totalOrders'] - metrics2025['totalOrders']:,.0f} orders by improving online services.</p>
+                            <div class="insight-metric">
+                                <div class="insight-metric-value">{metrics2024['totalOrders'] - metrics2025['totalOrders']:,.0f}</div>
+                                <div class="insight-metric-label">Potential Order Volume</div>
+                            </div>
+                        </div>
+
+                        <div class="insight-card">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Areas for Improvement</h4>
+                            <p>Online sales share decreased by {abs(metrics2025['onlinePercentage'] - metrics2024['onlinePercentage']):.1f} percentage points.</p>
+                            <div class="insight-metric">
+                                <div class="insight-metric-value">{abs(metrics2025['onlinePercentage'] - metrics2024['onlinePercentage']):.1f} pp</div>
+                                <div class="insight-metric-label">Online Share Decline</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard data
+        const dashboardData = {{json.dumps(dashboard_data)}};
+        const branchMetrics = {{json.dumps(branch_metrics)}};
         
         // Initialize charts
-        const salesCtx = document.getElementById('monthly-sales-chart').getContext('2d');
-        const transactionsCtx = document.getElementById('monthly-transactions-chart').getContext('2d');
-        
-        let salesChart = new Chart(salesCtx, {
-            type: 'line',
-            data: {
-                labels: monthLabels,
-                datasets: []
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Monthly Sales Comparison'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': $' + context.raw.toLocaleString();
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        
-        let transactionsChart = new Chart(transactionsCtx, {
-            type: 'bar',
-            data: {
-                labels: monthLabels,
-                datasets: []
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Monthly Transaction Volume'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.raw.toLocaleString() + ' orders';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString();
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Function to update charts based on filters
-        function updateCharts() {
-            const yearFilter = document.getElementById('year-filter').value;
-            const branchFilter = document.getElementById('branch-filter').value;
+        document.addEventListener('DOMContentLoaded', function() {{
+            // Initialize Year Overview Chart
+            const yearCtx = document.getElementById('year-overview-chart').getContext('2d');
+            new Chart(yearCtx, {{
+                type: 'bar',
+                data: {{
+                    labels: ['Total Sales', 'Total Orders', 'Avg Order Value', 'Online Sales', 'Online Orders'],
+                    datasets: [{{
+                        label: '2024',
+                        data: [
+                            {metrics2024['totalSales']},
+                            {metrics2024['totalOrders']},
+                            {metrics2024['averageOrderValue']},
+                            {metrics2024['totalOnlineSales']},
+                            {metrics2024['totalOnlineOrders']}
+                        ],
+                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        borderWidth: 1
+                    }}, {{
+                        label: '2025',
+                        data: [
+                            {metrics2025['totalSales']},
+                            {metrics2025['totalOrders']},
+                            {metrics2025['averageOrderValue']},
+                            {metrics2025['totalOnlineSales']},
+                            {metrics2025['totalOnlineOrders']}
+                        ],
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }}]
+                }},
+                options: {{
+                    responsive: true,
+                    plugins: {{
+                        legend: {{
+                            position: 'top',
+                        }},
+                        title: {{
+                            display: true,
+                            text: 'Year-over-Year Performance Comparison'
+                        }}
+                    }},
+                    scales: {{
+                        y: {{
+                            beginAtZero: true,
+                            ticks: {{
+                                callback: function(value) {{
+                                    if (this.chart.data.labels[this.dataIndex] === 'Total Sales' || 
+                                        this.chart.data.labels[this.dataIndex] === 'Online Sales') {{
+                                        return '$' + value.toLocaleString();
+                                    }}
+                                    return value.toLocaleString();
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }});
+
+            // Initialize Branch Comparison Chart
+            const branchCtx = document.getElementById('branch-comparison-chart').getContext('2d');
+            const branchLabels = {{json.dumps(dashboard_data['branches'])}};
+            const branchData2024 = {{json.dumps([sum(dashboard_data['data2024']['sales'][branch]) for branch in dashboard_data['branches']])}};
+            const branchData2025 = {{json.dumps([sum(dashboard_data['data2025']['sales'][branch]) for branch in dashboard_data['branches']])}};
             
-            // Clear existing datasets
-            salesChart.data.datasets = [];
-            transactionsChart.data.datasets = [];
+            new Chart(branchCtx, {{
+                type: 'bar',
+                data: {{
+                    labels: branchLabels,
+                    datasets: [{{
+                        label: '2024 Sales',
+                        data: branchData2024,
+                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        borderWidth: 1
+                    }}, {{
+                        label: '2025 Sales',
+                        data: branchData2025,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }}]
+                }},
+                options: {{
+                    responsive: true,
+                    plugins: {{
+                        legend: {{
+                            position: 'top',
+                        }},
+                        title: {{
+                            display: true,
+                            text: 'Branch Sales Comparison'
+                        }}
+                    }},
+                    scales: {{
+                        y: {{
+                            beginAtZero: true,
+                            ticks: {{
+                                callback: function(value) {{
+                                    return '$' + value.toLocaleString();
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }});
+
+            // Populate Outlet Cards
+            const outletGrid = document.getElementById('outlet-grid');
+            outletGrid.innerHTML = '';
             
-            // Add datasets based on filters
-            if (yearFilter === 'both' || yearFilter === '2024') {
-                salesChart.data.datasets.push({
-                    label: '2024 Sales',
-                    data: monthlyData[2024][branchFilter].sales,
-                    borderColor: 'rgba(231, 76, 60, 1)',
-                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                    fill: true
-                });
+            {{json.dumps(dashboard_data['branches'])}}.forEach(branch => {{
+                const metrics = branchMetrics[branch];
+                const badgeClass = metrics.growth > 0 ? 'positive' : metrics.growth < 0 ? 'negative' : 'neutral';
                 
-                transactionsChart.data.datasets.push({
-                    label: '2024 Transactions',
-                    data: monthlyData[2024][branchFilter].transactions,
-                    backgroundColor: 'rgba(231, 76, 60, 0.7)'
-                });
-            }
+                const card = document.createElement('div');
+                card.className = `outlet-card ${{metrics.growth > 0 ? 'year2025' : 'year2024'}}`;
+                card.innerHTML = `
+                    <h3>
+                        {{json.dumps(dashboard_data['branchNames'])[branch]}}
+                        <span class="comparison-badge ${{badgeClass}}">
+                            ${{metrics.growth > 0 ? '+' : ''}}${{metrics.growth.toFixed(1)}}%
+                        </span>
+                    </h3>
+                    <div class="outlet-stats">
+                        <div class="outlet-stat">
+                            <div class="outlet-stat-label">2024 Sales</div>
+                            <div class="outlet-stat-value">${{metrics.sales2024.toLocaleString()}}</div>
+                        </div>
+                        <div class="outlet-stat">
+                            <div class="outlet-stat-label">2025 Sales</div>
+                            <div class="outlet-stat-value">${{metrics.sales2025.toLocaleString()}}</div>
+                        </div>
+                        <div class="outlet-stat">
+                            <div class="outlet-stat-label">2024 Online</div>
+                            <div class="outlet-stat-value">${{metrics.online2024.toLocaleString()}}</div>
+                        </div>
+                        <div class="outlet-stat">
+                            <div class="outlet-stat-label">2025 Online</div>
+                            <div class="outlet-stat-value">${{metrics.online2025.toLocaleString()}}</div>
+                        </div>
+                    </div>
+                `;
+                outletGrid.appendChild(card);
+            }});
+
+            // Populate Online Orders Table
+            const deliveryTbody = document.getElementById('delivery-counts-tbody');
+            deliveryTbody.innerHTML = '';
             
-            if (yearFilter === 'both' || yearFilter === '2025') {
-                salesChart.data.datasets.push({
-                    label: '2025 Sales (Partial)',
-                    data: monthlyData[2025][branchFilter].sales,
-                    borderColor: 'rgba(52, 152, 219, 1)',
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                    fill: true
-                });
+            {{json.dumps(dashboard_data['branches'])}}.forEach(branch => {{
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="branch-name">${{json.dumps(dashboard_data['branchNames'])[branch]}}</td>`;
                 
-                transactionsChart.data.datasets.push({
-                    label: '2025 Transactions',
-                    data: monthlyData[2025][branchFilter].transactions,
-                    backgroundColor: 'rgba(52, 152, 219, 0.7)'
-                });
-            }
+                {{json.dumps(dashboard_data['months'])}}.forEach((month, index) => {{
+                    const count2024 = {{json.dumps(dashboard_data['data2024']['online_orders'])[branch][index]}};
+                    const count2025 = {{json.dumps(dashboard_data['data2025']['online_orders'])[branch][index]}};
+                    const change = count2024 > 0 ? ((count2025 - count2024) / count2024 * 100).toFixed(1) : 0;
+                    
+                    row.innerHTML += `
+                        <td>${{count2024}}</td>
+                        <td>${{count2025}}</td>
+                        <td class="trend-cell">
+                            <span class="${{change > 0 ? 'trend-up' : change < 0 ? 'trend-down' : 'trend-neutral'}}">
+                                ${{change > 0 ? '+' : ''}}${{change}}%
+                            </span>
+                        </td>
+                    `;
+                }});
+                
+                deliveryTbody.appendChild(row);
+            }});
+
+            // Initialize Monthly Charts
+            const monthlySalesCtx = document.getElementById('monthly-sales-chart').getContext('2d');
+            const monthlyTransactionsCtx = document.getElementById('monthly-transactions-chart').getContext('2d');
             
-            // Update charts
-            salesChart.update();
-            transactionsChart.update();
-        }
-        
-        // Add event listeners to filters
-        document.getElementById('year-filter').addEventListener('change', updateCharts);
-        document.getElementById('branch-filter').addEventListener('change', updateCharts);
-        
-        // Initial chart update
-        updateCharts();
-    </script>
-    
-    <script>
-        // Delivery vs Online 2024
-        const deliveryData2024 = [
-            {Branch: 'All Outlets', Delivery: 179101.7, Online: 100450.9},
-            {Branch: 'Al Rigga', Delivery: 1993.0, Online: 0.0},
-            {Branch: 'Al Barsha', Delivery: 25260.8, Online: 8489.9},
-            {Branch: 'Hamdan', Delivery: 106561.5, Online: 41145.6},
-            {Branch: 'Khalidiya', Delivery: 57769.4, Online: 16494.6},
-            {Branch: 'Muroor', Delivery: 28018.3, Online: 6667.8},
-            {Branch: 'Satwa', Delivery: 23066.0, Online: 15232.0},
-            {Branch: 'Shabiya', Delivery: 61288.8, Online: 7920.8},
-            {Branch: 'Electra', Delivery: 0.0, Online: 0.0}
-        ];
-        
-        const deliveryData2025 = [
-            {Branch: 'All Outlets', Delivery: 197011.87, Online: 110495.99},
-            {Branch: 'Al Rigga', Delivery: 2192.3, Online: 0.0},
-            {Branch: 'Al Barsha', Delivery: 27786.88, Online: 9338.89},
-            {Branch: 'Hamdan', Delivery: 117217.65, Online: 45260.16},
-            {Branch: 'Khalidiya', Delivery: 63546.34, Online: 18144.06},
-            {Branch: 'Muroor', Delivery: 30820.13, Online: 7334.58},
-            {Branch: 'Satwa', Delivery: 25372.6, Online: 16755.2},
-            {Branch: 'Shabiya', Delivery: 67417.68, Online: 8712.88},
-            {Branch: 'Electra', Delivery: 0.0, Online: 0.0}
-        ];
-        
-        // Platform 2024
-        const platformData2024 = [
-            {Branch: 'All Outlets', Platform: 'NOON', Revenue: 948871.51},
-            {Branch: 'All Outlets', Platform: 'Careem', Revenue: 553988.76},
-            {Branch: 'All Outlets', Platform: 'Mastercard', Revenue: 569961.7},
-            {Branch: 'All Outlets', Platform: 'Visa', Revenue: 528002.2},
-            {Branch: 'All Outlets', Platform: 'Smiles', Revenue: 228675.9},
-            {Branch: 'All Outlets', Platform: 'Keeta', Revenue: 36606.3},
-            {Branch: 'All Outlets', Platform: 'Deliveroo', Revenue: 34687.7},
-            {Branch: 'All Outlets', Platform: 'Cash', Revenue: 1102979.9},
+            const monthlySales2024 = {{json.dumps([sum([dashboard_data['data2024']['sales'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])}};
+            const monthlySales2025 = {{json.dumps([sum([dashboard_data['data2025']['sales'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])}};
+            const monthlyOrders2024 = {{json.dumps([sum([dashboard_data['data2024']['orders'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])}};
+            const monthlyOrders2025 = {{json.dumps([sum([dashboard_data['data2025']['orders'][branch][i] for branch in dashboard_data['branches']]) for i in range(12)])}};
             
-            {Branch: 'Al Rigga', Platform: 'NOON', Revenue: 957.0},
-            {Branch: 'Al Rigga', Platform: 'Careem', Revenue: 559.0},
-            {Branch: 'Al Rigga', Platform: 'Mastercard', Revenue: 14338.5},
-            {Branch: 'Al Rigga', Platform: 'Visa', Revenue: 20902.1},
-            {Branch: 'Al Rigga', Platform: 'Smiles', Revenue: 1252.0},
-            {Branch: 'Al Rigga', Platform: 'Keeta', Revenue: 4506.2},
-            {Branch: 'Al Rigga', Platform: 'Deliveroo', Revenue: 0.0},
-            {Branch: 'Al Rigga', Platform: 'Cash', Revenue: 31690.4},
-            
-            {Branch: 'Al Barsha', Platform: 'NOON', Revenue: 143838.04},
-            {Branch: 'Al Barsha', Platform: 'Careem', Revenue: 74319.51},
-            {Branch: 'Al Barsha', Platform: 'Mastercard', Revenue: 64293.0},
-            {Branch: 'Al Barsha', Platform: 'Visa', Revenue: 87489.9},
-            {Branch: 'Al Barsha', Platform: 'Smiles', Revenue: 25437.7},
-            {Branch: 'Al Barsha', Platform: 'Keeta', Revenue: 15675.0},
-            {Branch: 'Al Barsha', Platform: 'Deliveroo', Revenue: 7835.0},
-            {Branch: 'Al Barsha', Platform: 'Cash', Revenue: 158980.9},
-            
-            {Branch: 'Hamdan', Platform: 'NOON', Revenue: 121182.74},
-            {Branch: 'Hamdan', Platform: 'Careem', Revenue: 96353.49},
-            {Branch: 'Hamdan', Platform: 'Mastercard', Revenue: 90563.8},
-            {Branch: 'Hamdan', Platform: 'Visa', Revenue: 73915.8},
-            {Branch: 'Hamdan', Platform: 'Smiles', Revenue: 35906.0},
-            {Branch: 'Hamdan', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Hamdan', Platform: 'Deliveroo', Revenue: 0.0},
-            {Branch: 'Hamdan', Platform: 'Cash', Revenue: 156497.9},
-            
-            {Branch: 'Khalidiya', Platform: 'NOON', Revenue: 118512.13},
-            {Branch: 'Khalidiya', Platform: 'Careem', Revenue: 81100.77},
-            {Branch: 'Khalidiya', Platform: 'Mastercard', Revenue: 73708.8},
-            {Branch: 'Khalidiya', Platform: 'Visa', Revenue: 62959.0},
-            {Branch: 'Khalidiya', Platform: 'Smiles', Revenue: 27564.0},
-            {Branch: 'Khalidiya', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Khalidiya', Platform: 'Deliveroo', Revenue: 19268.5},
-            {Branch: 'Khalidiya', Platform: 'Cash', Revenue: 114135.0},
-            
-            {Branch: 'Muroor', Platform: 'NOON', Revenue: 89313.16},
-            {Branch: 'Muroor', Platform: 'Careem', Revenue: 57361.41},
-            {Branch: 'Muroor', Platform: 'Mastercard', Revenue: 78434.9},
-            {Branch: 'Muroor', Platform: 'Visa', Revenue: 77196.8},
-            {Branch: 'Muroor', Platform: 'Smiles', Revenue: 21535.0},
-            {Branch: 'Muroor', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Muroor', Platform: 'Deliveroo', Revenue: 4730.6},
-            {Branch: 'Muroor', Platform: 'Cash', Revenue: 107632.8},
-            
-            {Branch: 'Satwa', Platform: 'NOON', Revenue: 163809.88},
-            {Branch: 'Satwa', Platform: 'Careem', Revenue: 63710.41},
-            {Branch: 'Satwa', Platform: 'Mastercard', Revenue: 40364.9},
-            {Branch: 'Satwa', Platform: 'Visa', Revenue: 52771.0},
-            {Branch: 'Satwa', Platform: 'Smiles', Revenue: 33051.6},
-            {Branch: 'Satwa', Platform: 'Keeta', Revenue: 16425.1},
-            {Branch: 'Satwa', Platform: 'Deliveroo', Revenue: 1849.6},
-            {Branch: 'Satwa', Platform: 'Cash', Revenue: 146964.0},
-            
-            {Branch: 'Shabiya', Platform: 'NOON', Revenue: 171659.46},
-            {Branch: 'Shabiya', Platform: 'Careem', Revenue: 80976.74},
-            {Branch: 'Shabiya', Platform: 'Mastercard', Revenue: 86172.8},
-            {Branch: 'Shabiya', Platform: 'Visa', Revenue: 67246.8},
-            {Branch: 'Shabiya', Platform: 'Smiles', Revenue: 52701.0},
-            {Branch: 'Shabiya', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Shabiya', Platform: 'Deliveroo', Revenue: 1004.0},
-            {Branch: 'Shabiya', Platform: 'Cash', Revenue: 137532.9},
-            
-            {Branch: 'Electra', Platform: 'NOON', Revenue: 139599.1},
-            {Branch: 'Electra', Platform: 'Careem', Revenue: 99607.43},
-            {Branch: 'Electra', Platform: 'Mastercard', Revenue: 122085.0},
-            {Branch: 'Electra', Platform: 'Visa', Revenue: 85520.8},
-            {Branch: 'Electra', Platform: 'Smiles', Revenue: 31228.6},
-            {Branch: 'Electra', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Electra', Platform: 'Deliveroo', Revenue: 0.0},
-            {Branch: 'Electra', Platform: 'Cash', Revenue: 249546.0}
-        ];
-        
-        const platformData2025 = [
-            {Branch: 'All Outlets', Platform: 'NOON', Revenue: 1043758.66},
-            {Branch: 'All Outlets', Platform: 'Careem', Revenue: 609387.64},
-            {Branch: 'All Outlets', Platform: 'Mastercard', Revenue: 626957.87},
-            {Branch: 'All Outlets', Platform: 'Visa', Revenue: 580802.42},
-            {Branch: 'All Outlets', Platform: 'Smiles', Revenue: 251543.49},
-            {Branch: 'All Outlets', Platform: 'Keeta', Revenue: 40266.93},
-            {Branch: 'All Outlets', Platform: 'Deliveroo', Revenue: 38156.47},
-            {Branch: 'All Outlets', Platform: 'Cash', Revenue: 1213277.89},
-            
-            {Branch: 'Al Rigga', Platform: 'NOON', Revenue: 1052.7},
-            {Branch: 'Al Rigga', Platform: 'Careem', Revenue: 614.9},
-            {Branch: 'Al Rigga', Platform: 'Mastercard', Revenue: 15772.35},
-            {Branch: 'Al Rigga', Platform: 'Visa', Revenue: 22992.31},
-            {Branch: 'Al Rigga', Platform: 'Smiles', Revenue: 1377.2},
-            {Branch: 'Al Rigga', Platform: 'Keeta', Revenue: 4956.82},
-            {Branch: 'Al Rigga', Platform: 'Deliveroo', Revenue: 0.0},
-            {Branch: 'Al Rigga', Platform: 'Cash', Revenue: 34859.44},
-            
-            {Branch: 'Al Barsha', Platform: 'NOON', Revenue: 158221.84},
-            {Branch: 'Al Barsha', Platform: 'Careem', Revenue: 81751.46},
-            {Branch: 'Al Barsha', Platform: 'Mastercard', Revenue: 70722.3},
-            {Branch: 'Al Barsha', Platform: 'Visa', Revenue: 96238.89},
-            {Branch: 'Al Barsha', Platform: 'Smiles', Revenue: 27981.47},
-            {Branch: 'Al Barsha', Platform: 'Keeta', Revenue: 17242.5},
-            {Branch: 'Al Barsha', Platform: 'Deliveroo', Revenue: 8618.5},
-            {Branch: 'Al Barsha', Platform: 'Cash', Revenue: 174878.99},
-            
-            {Branch: 'Hamdan', Platform: 'NOON', Revenue: 133301.01},
-            {Branch: 'Hamdan', Platform: 'Careem', Revenue: 105988.84},
-            {Branch: 'Hamdan', Platform: 'Mastercard', Revenue: 99620.18},
-            {Branch: 'Hamdan', Platform: 'Visa', Revenue: 81307.38},
-            {Branch: 'Hamdan', Platform: 'Smiles', Revenue: 39496.6},
-            {Branch: 'Hamdan', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Hamdan', Platform: 'Deliveroo', Revenue: 0.0},
-            {Branch: 'Hamdan', Platform: 'Cash', Revenue: 172147.69},
-            
-            {Branch: 'Khalidiya', Platform: 'NOON', Revenue: 130363.34},
-            {Branch: 'Khalidiya', Platform: 'Careem', Revenue: 89210.85},
-            {Branch: 'Khalidiya', Platform: 'Mastercard', Revenue: 81079.68},
-            {Branch: 'Khalidiya', Platform: 'Visa', Revenue: 69254.9},
-            {Branch: 'Khalidiya', Platform: 'Smiles', Revenue: 30320.4},
-            {Branch: 'Khalidiya', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Khalidiya', Platform: 'Deliveroo', Revenue: 21195.35},
-            {Branch: 'Khalidiya', Platform: 'Cash', Revenue: 125548.5},
-            
-            {Branch: 'Muroor', Platform: 'NOON', Revenue: 98244.48},
-            {Branch: 'Muroor', Platform: 'Careem', Revenue: 63097.55},
-            {Branch: 'Muroor', Platform: 'Mastercard', Revenue: 86278.39},
-            {Branch: 'Muroor', Platform: 'Visa', Revenue: 84916.48},
-            {Branch: 'Muroor', Platform: 'Smiles', Revenue: 23688.5},
-            {Branch: 'Muroor', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Muroor', Platform: 'Deliveroo', Revenue: 5203.66},
-            {Branch: 'Muroor', Platform: 'Cash', Revenue: 118396.08},
-            
-            {Branch: 'Satwa', Platform: 'NOON', Revenue: 180190.87},
-            {Branch: 'Satwa', Platform: 'Careem', Revenue: 70081.45},
-            {Branch: 'Satwa', Platform: 'Mastercard', Revenue: 44401.39},
-            {Branch: 'Satwa', Platform: 'Visa', Revenue: 58048.1},
-            {Branch: 'Satwa', Platform: 'Smiles', Revenue: 36356.76},
-            {Branch: 'Satwa', Platform: 'Keeta', Revenue: 18067.61},
-            {Branch: 'Satwa', Platform: 'Deliveroo', Revenue: 2034.56},
-            {Branch: 'Satwa', Platform: 'Cash', Revenue: 161660.4},
-            
-            {Branch: 'Shabiya', Platform: 'NOON', Revenue: 188825.41},
-            {Branch: 'Shabiya', Platform: 'Careem', Revenue: 89074.41},
-            {Branch: 'Shabiya', Platform: 'Mastercard', Revenue: 94790.08},
-            {Branch: 'Shabiya', Platform: 'Visa', Revenue: 73971.48},
-            {Branch: 'Shabiya', Platform: 'Smiles', Revenue: 57971.1},
-            {Branch: 'Shabiya', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Shabiya', Platform: 'Deliveroo', Revenue: 1104.4},
-            {Branch: 'Shabiya', Platform: 'Cash', Revenue: 151286.19},
-            
-            {Branch: 'Electra', Platform: 'NOON', Revenue: 153559.01},
-            {Branch: 'Electra', Platform: 'Careem', Revenue: 109568.17},
-            {Branch: 'Electra', Platform: 'Mastercard', Revenue: 134293.5},
-            {Branch: 'Electra', Platform: 'Visa', Revenue: 94072.88},
-            {Branch: 'Electra', Platform: 'Smiles', Revenue: 34351.46},
-            {Branch: 'Electra', Platform: 'Keeta', Revenue: 0.0},
-            {Branch: 'Electra', Platform: 'Deliveroo', Revenue: 0.0},
-            {Branch: 'Electra', Platform: 'Cash', Revenue: 274500.6}
-        ];
-        
-        // Payment trends data
-        const paymentTrendsData = [
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'Cash', Revenue: 1102979.9, Transactions: 52873},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'NOON CARD', Revenue: 948871.51, Transactions: 26537},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'Master card', Revenue: 569961.7, Transactions: 22560},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'Careem CARD', Revenue: 553988.76, Transactions: 15373},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'Visa Card', Revenue: 528002.2, Transactions: 20129},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'SMILES CARD', Revenue: 228675.9, Transactions: 9479},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'Delivery CARD', Revenue: 179101.7, Transactions: 3645},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'Delivery Cash', Revenue: 165956.9, Transactions: 3505},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'ONLINE CASH', Revenue: 63841.7, Transactions: 1432},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'Keeta CARD', Revenue: 36606.3, Transactions: 521},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'DELIVERO CARD', Revenue: 34687.7, Transactions: 776},
-            {Year: 2024, Branch: 'All Outlets', 'Payment Method': 'ONLINE CARD', Revenue: 34608.2, Transactions: 651},
-            
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'Cash', Revenue: 1213277.89, Transactions: 58160.3},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'NOON CARD', Revenue: 1043758.66, Transactions: 29190.7},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'Master card', Revenue: 626957.87, Transactions: 24816},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'Careem CARD', Revenue: 609387.64, Transactions: 16910.3},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'Visa Card', Revenue: 580802.42, Transactions: 22141.9},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'SMILES CARD', Revenue: 251543.49, Transactions: 10426.9},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'Delivery CARD', Revenue: 197011.87, Transactions: 4009.5},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'Delivery Cash', Revenue: 182552.59, Transactions: 3855.5},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'ONLINE CASH', Revenue: 70225.87, Transactions: 1575.2},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'Keeta CARD', Revenue: 40266.93, Transactions: 573.1},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'DELIVERO CARD', Revenue: 38156.47, Transactions: 853.6},
-            {Year: 2025, Branch: 'All Outlets', 'Payment Method': 'ONLINE CARD', Revenue: 38069.02, Transactions: 716.1}
-        ];
-        
-        // Create Delivery vs Online charts
-        const deliveryTrace2024 = {
-            x: deliveryData2024.map(item => item.Branch),
-            y: deliveryData2024.map(item => item.Delivery),
-            name: 'Delivery',
-            type: 'bar',
-            marker: {color: '#D9534F'}
-        };
-        
-        const onlineTrace2024 = {
-            x: deliveryData2024.map(item => item.Branch),
-            y: deliveryData2024.map(item => item.Online),
-            name: 'Online',
-            type: 'bar',
-            marker: {color: '#5DADE2'}
-        };
-        
-        const deliveryTrace2025 = {
-            x: deliveryData2025.map(item => item.Branch),
-            y: deliveryData2025.map(item => item.Delivery),
-            name: 'Delivery',
-            type: 'bar',
-            marker: {color: '#D9534F'}
-        };
-        
-        const onlineTrace2025 = {
-            x: deliveryData2025.map(item => item.Branch),
-            y: deliveryData2025.map(item => item.Online),
-            name: 'Online',
-            type: 'bar',
-            marker: {color: '#5DADE2'}
-        };
-        
-        const layoutDelivery2024 = {
-            title: '2024 Delivery vs Online Revenue',
-            barmode: 'group',
-            yaxis: {
-                title: 'Revenue ($)',
-                tickformat: '$,.0f'
-            }
-        };
-        
-        const layoutDelivery2025 = {
-            title: '2025 Delivery vs Online Revenue',
-            barmode: 'group',
-            yaxis: {
-                title: 'Revenue ($)',
-                tickformat: '$,.0f'
-            }
-        };
-        
-        Plotly.newPlot('plotly-delivery-2024', [deliveryTrace2024, onlineTrace2024], layoutDelivery2024);
-        Plotly.newPlot('plotly-delivery-2025', [deliveryTrace2025, onlineTrace2025], layoutDelivery2025);
-        
-        // Create Platform charts
-        const platformTrace2024 = {
-            x: platformData2024.map(item => item.Branch),
-            y: platformData2024.map(item => item.Revenue),
-            name: platformData2024.map(item => item.Platform),
-            type: 'bar',
-            marker: {color: platformData2024.map(item => {
-                const colors = {
-                    'NOON': '#FF6B6B',
-                    'Careem': '#4ECDC4',
-                    'Mastercard': '#FFD166',
-                    'Visa': '#06D6A0',
-                    'Smiles': '#118AB2',
-                    'Keeta': '#073B4C',
-                    'Deliveroo': '#EF476F',
-                    'Cash': '#6A4C93'
-                };
-                return colors[item.Platform] || '#999';
-            })}
-        };
-        
-        const platformTrace2025 = {
-            x: platformData2025.map(item => item.Branch),
-            y: platformData2025.map(item => item.Revenue),
-            name: platformData2025.map(item => item.Platform),
-            type: 'bar',
-            marker: {color: platformData2025.map(item => {
-                const colors = {
-                    'NOON': '#FF6B6B',
-                    'Careem': '#4ECDC4',
-                    'Mastercard': '#FFD166',
-                    'Visa': '#06D6A0',
-                    'Smiles': '#118AB2',
-                    'Keeta': '#073B4C',
-                    'Deliveroo': '#EF476F',
-                    'Cash': '#6A4C93'
-                };
-                return colors[item.Platform] || '#999';
-            })}
-        };
-        
-        const layoutPlatform2024 = {
-            title: '2024 Platform Revenue',
-            barmode: 'group',
-            yaxis: {
-                title: 'Revenue ($)',
-                tickformat: '$,.0f'
-            }
-        };
-        
-        const layoutPlatform2025 = {
-            title: '2025 Platform Revenue',
-            barmode: 'group',
-            yaxis: {
-                title: 'Revenue ($)',
-                tickformat: '$,.0f'
-            }
-        };
-        
-        Plotly.newPlot('plotly-platform-2024', [platformTrace2024], layoutPlatform2024);
-        Plotly.newPlot('plotly-platform-2025', [platformTrace2025], layoutPlatform2025);
-        
-        // Create Payment Trends charts
-        const paymentRevenueTrace = {
-            x: paymentTrendsData.map(item => item['Payment Method']),
-            y: paymentTrendsData.map(item => item.Revenue),
-            name: paymentTrendsData.map(item => item.Year),
-            type: 'bar',
-            marker: {color: paymentTrendsData.map(item => item.Year === 2024 ? '#D9534F' : '#3498db')}
-        };
-        
-        const paymentTransactionsTrace = {
-            x: paymentTrendsData.map(item => item['Payment Method']),
-            y: paymentTrendsData.map(item => item.Transactions),
-            name: paymentTrendsData.map(item => item.Year),
-            type: 'bar',
-            marker: {color: paymentTrendsData.map(item => item.Year === 2024 ? '#D9534F' : '#3498db')}
-        };
-        
-        const layoutPaymentRevenue = {
-            title: 'Payment Method Revenue Comparison',
-            barmode: 'group',
-            xaxis: {
-                tickangle: -45
-            },
-            yaxis: {
-                title: 'Revenue ($)',
-                tickformat: '$,.0f'
-            }
-        };
-        
-        const layoutPaymentTransactions = {
-            title: 'Payment Method Transaction Count Comparison',
-            barmode: 'group',
-            xaxis: {
-                tickangle: -45
-            },
-            yaxis: {
-                title: 'Transactions'
-            }
-        };
-        
-        Plotly.newPlot('plotly-payment-revenue', [paymentRevenueTrace], layoutPaymentRevenue);
-        Plotly.newPlot('plotly-payment-transactions', [paymentTransactionsTrace], layoutPaymentTransactions);
+            new Chart(monthlySalesCtx, {{
+                type: 'line',
+                data: {{
+                    labels: {{json.dumps([dashboard_data['monthNames'][month] for month in dashboard_data['months']])}},
+                    datasets: [{{
+                        label: '2024 Sales',
+                        data: monthlySales2024,
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        fill: true
+                    }}, {{
+                        label: '2025 Sales',
+                        data: monthlySales2025,
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true
+                    }}]
+                }},
+                options: {{
+                    responsive: true,
+                    plugins: {{
+                        legend: {{
+                            position: 'top',
+                        }},
+                        title: {{
+                            display: true,
+                            text: 'Monthly Sales Comparison'
+                        }}
+                    }},
+                    scales: {{
+                        y: {{
+                            beginAtZero: true,
+                            ticks: {{
+                                callback: function(value) {{
+                                    return '$' + value.toLocaleString();
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }});
+
+            new Chart(monthlyTransactionsCtx, {{
+                type: 'bar',
+                data: {{
+                    labels: {{json.dumps([dashboard_data['monthNames'][month] for month in dashboard_data['months']])}},
+                    datasets: [{{
+                        label: '2024 Orders',
+                        data: monthlyOrders2024,
+                        backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                        borderColor: 'rgba(231, 76, 60, 1)',
+                        borderWidth: 1
+                    }}, {{
+                        label: '2025 Orders',
+                        data: monthlyOrders2025,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }}]
+                }},
+                options: {{
+                    responsive: true,
+                    plugins: {{
+                        legend: {{
+                            position: 'top',
+                        }},
+                        title: {{
+                            display: true,
+                            text: 'Monthly Transaction Volume'
+                        }}
+                    }},
+                    scales: {{
+                        y: {{
+                            beginAtZero: true,
+                            ticks: {{
+                                callback: function(value) {{
+                                    return value.toLocaleString();
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+            }});
+
+            // Navigation functionality
+            document.querySelectorAll('.menu-item').forEach(item => {{
+                item.addEventListener('click', function() {{
+                    document.querySelectorAll('.menu-item').forEach(menu => menu.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const targetSection = this.dataset.section;
+                    document.querySelectorAll('.section').forEach(section => {{
+                        section.classList.remove('active');
+                    }});
+                    document.getElementById(targetSection).classList.add('active');
+                }});
+            }});
+
+            // Year selection functionality
+            document.querySelectorAll('.year-btn').forEach(button => {{
+                button.addEventListener('click', function() {{
+                    document.querySelectorAll('.year-btn').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const selectedYear = this.dataset.year;
+                    updateDashboard(selectedYear);
+                }});
+            }});
+
+            function updateDashboard(year) {{
+                // Update stat cards based on year selection
+                if (year === '2024') {{
+                    document.querySelectorAll('.stat-card.year2025, .outlet-card.year2025').forEach(card => {{
+                        card.style.opacity = '0.5';
+                        card.style.transform = 'scale(0.98)';
+                    }});
+                    document.querySelectorAll('.stat-card.year2024, .outlet-card.year2024').forEach(card => {{
+                        card.style.opacity = '1';
+                        card.style.transform = 'scale(1)';
+                    }});
+                }} else if (year === '2025') {{
+                    document.querySelectorAll('.stat-card.year2024, .outlet-card.year2024').forEach(card => {{
+                        card.style.opacity = '0.5';
+                        card.style.transform = 'scale(0.98)';
+                    }});
+                    document.querySelectorAll('.stat-card.year2025, .outlet-card.year2025').forEach(card => {{
+                        card.style.opacity = '1';
+                        card.style.transform = 'scale(1)';
+                    }});
+                }} else if (year === 'comparison') {{
+                    document.querySelectorAll('.stat-card, .outlet-card').forEach(card => {{
+                        card.style.opacity = '1';
+                        card.style.transform = 'scale(1)';
+                    }});
+                }}
+            }}
+        }});
     </script>
 </body>
 </html>
+"""
+    
+    # Write the HTML file
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(html_template)
+    
+    print(f"Dashboard generated successfully: {output_file}")
+
+# --------------------------
+# --- MAIN EXECUTION ---
+# --------------------------
+
+if __name__ == "__main__":
+    # Generate the dashboard
+    generate_dashboard_html()
